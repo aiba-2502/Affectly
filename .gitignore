@@ -1,0 +1,24 @@
+# macOS特有の不要ファイル
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# スポットライト検索
+.Spotlight-V100
+
+# macOS Finderの設定ファイル
+.Trashes
+Icon?
+
+# 他の一般的な一時ファイルやバックアップ
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+*.bak
+*.tmp
+*.swp
+*.swo
+*.~*
