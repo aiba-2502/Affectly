@@ -109,3 +109,6 @@
 | 感情可視化・レポート         | Chart.js / Recharts                         |
 
 ※使用ライブラリは変更の可能性あり
+
+## 画面遷移図 - Figmaリンク
+https://www.figma.com/design/7LdlGw32kjHaZVHyc1o2eQ/%E5%BF%83%E3%81%AE%E3%83%AD%E3%82%B0?node-id=0-1&t=jIXvhxMQKXkdMGfm-1
