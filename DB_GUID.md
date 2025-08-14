@@ -7,7 +7,7 @@
 
 ## 前提（IDと整合の方針）
 - **RDB（厳密データ）**：`users` / `tags` / `chats` / `api_tokens` / **`summaries`**（統合サマリ）
-- **MongoDB（可変・大容量）**：**`messages_doc`**（本文＋感情メタを埋め込み）
+- **MongoDB（可変・大容量）**：**`messages_doc`**（チャット本文）
 - **ID整合**：MongoDB 側のチャット参照は **`chat_uid`（文字列）** を使用。  
   例：`chat_uid = "chat-" + chats.id`（RDBの `chats.id` を文字列化）
 
@@ -122,7 +122,7 @@
 ---
 
 ## ER図（Mermaid / PK・FK明記・文法準拠）
-> ER図：https://gyazo.com/26683e92a198239faffdb78e61f7b479
+> ER図格納先：/images/087b7bf154e1baab02d44c3a45e787be.png
 > ※ Mermaid の制約に合わせて型は `bigint/string/float/boolean/date/datetime` に正規化して表示しています（実DBではBIGINT/JSON等でOK）。
 
 ```mermaid
@@ -193,13 +193,14 @@ erDiagram
     string   emotion_keywords
   }
 
-  %% ========== Relationships ==========
-  users ||--o{ chats : has
-  tags  ||--o{ chats : categorizes
-  users ||--o{ api_tokens : has
-  chats ||--o{ summaries : session_summary
-  users ||--o{ summaries : periodic_summary
+  %% ========== Relationships with compact FK labels ==========
+  users ||--o{ chats       : FK-user_id
+  tags  ||--o{ chats       : FK-tag_id_to
+  users ||--o{ api_tokens  : FK-user_id
 
-  %% logical links across RDB/Mongo
-  chats ||--o{ messages_doc : has_messages
-  users ||--o{ messages_doc : emitted_by
+  chats ||--o{ summaries   : FK-chat_id
+  users ||--o{ summaries   : FK-user_id
+
+  %% Logical links across RDB and MongoDB
+  chats ||--o{ messages_doc : LOGICAL-chat_uid
+  users ||--o{ messages_doc : LOGICAL-user_id
