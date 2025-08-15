@@ -27,13 +27,13 @@
 | email | VARCHAR(255) | NOT NULL, UNIQUE | ログインID。ユニーク制約で重複登録を防止（小文字正規化推奨）。 |
 | encrypted_password | VARCHAR(255) | NOT NULL | パスワードのハッシュ値（Devise等で管理）。 |
 | is_active | BOOLEAN | NOT NULL | アカウントの有効/無効フラグ（退会・凍結時に無効化）。 |
-| created_at | DATETIME | NOT NULL | 登録日時（監査用）。 |
-| updated_at | DATETIME | NOT NULL | 更新日時（監査用）。 |
+| created_at | DATETIME | NOT NULL | 登録日時 |
+| updated_at | DATETIME | NOT NULL | 更新日時 |
 
 ---
 
-### 2) tags（感情タグ辞書）
-> **目的**：会話（`chats`）に付与する**感情タグ**のマスタ。検索/集計の絞り込み軸を提供します。  
+### 2) tags（感情タグマスタ）
+> **目的**：会話（`chats`）に付与および検索/集計の絞り込み用の**感情タグ**のマスタ。  
 > **主なユースケース**：チャット一覧のフィルタ、期間集計のグルーピング。
 
 | カラム名 | 型 | 制約 | 説明（カラムの役割） |
@@ -41,13 +41,13 @@
 | id | BIGINT | PK | タグID。 |
 | name | VARCHAR(50) | NOT NULL, UNIQUE | タグ名（重複禁止）。例：`仕事`、`家族`、`健康`。 |
 | category | VARCHAR(30) |  | タグの種別。例：`topic`（話題）、`emotion`（感情系）、`value`（価値観軸）など。 |
-| created_at | DATETIME | NOT NULL | 登録日時。 |
-| updated_at | DATETIME | NOT NULL | 更新日時。 |
+| created_at | DATETIME | NOT NULL | 登録日時 |
+| updated_at | DATETIME | NOT NULL | 更新日時 |
 
 ---
 
 ### 3) chats（チャットセッション）
-> **目的**：1回の**対話セッション情報**（所有者・感情タグ・タイトル等）を保持する軽量コンテナ。本文はMongoDB側に格納します。  
+> **目的**：1回の対話セッションの**チャットメタ情報**（所有者・感情タグ・タイトル等）を保持する軽量コンテナ。※チェットメッセージ本文はMongoDB側に格納します。  
 > **主なユースケース**：会話一覧表示、タイトル編集、タグによる絞り込み、セッション要約（`summaries`）の紐付け。
 
 | カラム名 | 型 | 制約 | 説明（カラムの役割） |
@@ -56,8 +56,8 @@
 | user_id | BIGINT | NOT NULL, FK→users.id | このチャットの所有ユーザー。 |
 | tag_id | BIGINT | NULL, FK→tags.id | 公式タグ（任意・1対1）。UIの絞り込みに使用。 |
 | title | VARCHAR(120) |  | セッションの自動/手動タイトル。 |
-| created_at | DATETIME | NOT NULL | 作成日時。 |
-| updated_at | DATETIME | NOT NULL | 更新日時。 |
+| created_at | DATETIME | NOT NULL | 登録日時 |
+| updated_at | DATETIME | NOT NULL | 更新日時 |
 
 ---
 
@@ -71,15 +71,15 @@
 | user_id | BIGINT | NOT NULL, FK→users.id | トークンの所有者。 |
 | encrypted_token | VARCHAR(191) | NOT NULL, UNIQUE | トークンのハッシュ（平文は保存しない）。 |
 | expires_at | DATETIME |  | 失効日時（期限切れ判定）。 |
-| created_at | DATETIME | NOT NULL | 発行日時。 |
-| updated_at | DATETIME | NOT NULL | 更新日時。 |
+| created_at | DATETIME | NOT NULL | 発行日時 |
+| updated_at | DATETIME | NOT NULL | 更新日時 |
 
 
 ---
 
 ### 5) summaries（統合サマリ）
 > **目的**：**チャット単位（session）**または**ユーザー単位（日/週/月）**の要約・洞察・感情分布・メトリクスを**1レコードで一意**に保持。  
-> **主なユースケース**：日次/週次/月次のレポート画面、セッション要約の表示・再生成判定。
+> **主なユースケース**：日次/週次/月次の要約・感情分析レポート保持。
 
 | カラム名 | 型 | 制約 | 説明（カラムの役割） |
 |---|---|---|---|
@@ -90,8 +90,8 @@
 | tally_start_at | DATETIME | NOT NULL | バケット開始（UTC）。例：日次0:00、週次週頭、月次月初、セッション開始。 |
 | tally_end_at | DATETIME | NOT NULL | バケット終了（UTC）。UI/再集計の境界に利用。 |
 | analysis_data | JSON | NOT NULL | サマリ本体。例：`{ "summary": "...", "insights": {...}, "sentiment_overview": {...}, "metrics": {...} }` |
-| created_at | DATETIME | NOT NULL | 作成日時。 |
-| updated_at | DATETIME | NOT NULL | 更新日時。 |
+| created_at | DATETIME | NOT NULL | 登録日時 |
+| updated_at | DATETIME | NOT NULL | 更新日時 |
 
 
 ---
@@ -99,8 +99,8 @@
 ## NoSQL（MongoDB）
 
 ### messages_doc（メッセージ本文＋感情メタ）
-> **目的**：可変スキーマで増え続ける**発話本文と感情強度**を保存。  
-> **主なユースケース**：チャット画面の時系列チャット全件表示、要約/集計（`summaries`）の種。
+-> **目的**：可変スキーマで増え続ける**発話本文**を1保存。  
+-> **主なユースケース**：チャット画面の時系列チャットメッセージ表示、会話要約/感情分析（`summaries`）対象。
 
 | フィールド | 型 | 必須 | 説明（カラムの役割） |
 |---|---|:---:|---|
@@ -111,7 +111,7 @@
 | llm_metadata | object |  | 生成モデル・トークン数・プロンプト情報など任意メタ。 |
 | emotion_score | number |  | 感情強度（0〜1）。 |
 | emotion_keywords | array\<string> |  | キーワード（きっかけ語 例：`["上司","納期"]`）。 |
-
+| send_at | number | ✔ | 送信日時 |
 
 ---
 
