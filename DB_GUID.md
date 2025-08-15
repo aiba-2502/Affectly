@@ -179,15 +179,16 @@ erDiagram
     string   llm_metadata
     float    emotion_score
     string   emotion_keywords
+    string   send_at
   }
 
   %% ========== Relationships with FK labels ==========
-  users ||--o{ chats       : FK-users．id
-  tags  ||--o{ chats       : FK-tags．id
-  users ||--o{ api_tokens  : FK-users．id
-  chats ||--o{ summaries   : FK-chats．id
-  users ||--o{ summaries   : FK-users．id
+  users ||--o{ chats       : "FK-users.id"
+  tags  ||--o{ chats       : "FK-tags.id"
+  users ||--o{ api_tokens  : "FK-users.id"
+  chats ||--o{ summaries   : "FK-chats.id"
+  users ||--o{ summaries   : "FK-users.id"
 
   %% Logical links across RDB and MongoDB
-  chats ||--o{ messages_doc : LOGICAL-chats．id
-  users ||--o{ messages_doc : LOGICAL-users．id
+  chats ||--o{ messages_doc : "LOGICAL-chats.id"
+  users ||--o{ messages_doc : "LOGICAL-users.id"
