@@ -1,6 +1,6 @@
 # 心のログ – データディクショナリ（RDB＋MongoDB｜messages=MongoDB・summaries=RDB）
 
-> バックエンド：Rails（RDB＝MySQL 8 / NoSQL＝MongoDB）  
+> バックエンド：Rails（RDB＝MySQL / NoSQL＝MongoDB）  
 > 採用方針：**メッセージ本体＝MongoDB**（可変スキーマ・大容量・時系列）、**サマリ＝RDB**（安定スキーマ・一意制約・集計/レポート向き）
 
 ---
@@ -12,112 +12,106 @@
   例：`chat_uid = "chat-" + chats.id`（RDBの `chats.id` を文字列化）
 
 ---
+**テーブルの目的**と**各カラムの役割**
 
-## ■ RDB（MySQL）
+## RDB（MySQL）
 
-### 1) `users`（ユーザー）
-| カラム名 | 型 | 必須 | 例 | 役割・格納値 |
-|---|---|---|---|---|
-| id | BIGINT (PK) | ✔ | 1 | 主キー |
-| username | VARCHAR(50) | ✔ | テストユーザー | 表示名 |
-| email | VARCHAR(255) | ✔ / UNIQUE | user@example.com | ログインID（小文字正規化推奨） |
-| encrypted_password | VARCHAR(255) | ✔ | `$2a$12$...` | ハッシュ化パスワード（Devise等） |
-| is_active | BOOLEAN | ✔ | true/false | アカウント有効/無効 |
-| created_at | DATETIME | ✔ | 2025-08-10 12:00:00 | 登録日時 |
-| updated_at | DATETIME | ✔ | 2025-08-10 12:00:00 | 更新日時 |
+### 1) users（ユーザー）
+> **目的**：認証・認可の主軸となるユーザーアカウントの基表。表示名やログインID、パスワードハッシュを保持します。  
+> **主なユースケース**：ログイン判定、プロフィール表示、所有データ（`chats`/`summaries`/`api_tokens`）の紐付け。
 
-**インデックス例**：`UNIQUE(email)` / （任意）`INDEX(deleted_at)`
-
----
-
-### 2) `tags`（公式タグ辞書）
-| カラム名 | 型 | 必須 | 例 | 役割・格納値 |
-|---|---|---|---|---|
-| id | BIGINT (PK) | ✔ | 11 | タグID |
-| name | VARCHAR(50) | ✔ / UNIQUE | 仕事 | タグ名（重複禁止） |
-| category | VARCHAR(30) |  | topic | 種別：`topic` / `emotion` / `value` 等 |
-| created_at | DATETIME | ✔ | 2025-08-10 12:00:00 | 登録日時 |
-| updated_at | DATETIME | ✔ | 2025-08-10 12:00:00 | 更新日時 |
-
-**インデックス例**：`UNIQUE(name)` / `INDEX(category)`
+| カラム名 | 型 | 制約 | 説明（カラムの役割） |
+|---|---|---|---|
+| id | BIGINT | PK | 主キー。アプリ内の一意なユーザー識別子。 |
+| name | VARCHAR(50) | NOT NULL | 表示名。UIでの名前表記に使用（旧`username`を統合）。 |
+| email | VARCHAR(255) | NOT NULL, UNIQUE | ログインID。ユニーク制約で重複登録を防止（小文字正規化推奨）。 |
+| encrypted_password | VARCHAR(255) | NOT NULL | パスワードのハッシュ値（Devise等で管理）。 |
+| is_active | BOOLEAN | NOT NULL | アカウントの有効/無効フラグ（退会・凍結時に無効化）。 |
+| created_at | DATETIME | NOT NULL | 登録日時（監査用）。 |
+| updated_at | DATETIME | NOT NULL | 更新日時（監査用）。 |
 
 ---
 
-### 3) `chats`（チャットセッション｜旧 `conversations`）
-| カラム名 | 型 | 必須 | 例 | 役割・格納値 |
-|---|---|---|---|---|
-| id | BIGINT (PK) | ✔ | 101 | チャットID |
-| user_id | BIGINT (**FK**) | ✔ | 1 | 所有ユーザー（→ `users.id`） |
-| tag_id | BIGINT (**FK**) |  | 11 | 公式タグ（任意・1対1、→ `tags.id`） |
-| title | VARCHAR(120) |  | 今日のモヤモヤ | 自動/手動タイトル |
-| created_at | DATETIME | ✔ | 2025-08-10 12:00:00 | 登録日時 |
-| updated_at | DATETIME | ✔ | 2025-08-10 12:00:00 | 更新日時 |
+### 2) tags（感情タグ辞書）
+> **目的**：会話（`chats`）に付与する**感情タグ**のマスタ。検索/集計の絞り込み軸を提供します。  
+> **主なユースケース**：チャット一覧のフィルタ、期間集計のグルーピング。
 
-**インデックス例**：`INDEX(user_id, started_at)` / `INDEX(tag_id)`
-
----
-
-### 4) `api_tokens`（個人APIトークン／デバイス認可）
-| カラム名 | 型 | 必須 | 例 | 役割・格納値 |
-|---|---|---|---|---|
-| id | BIGINT (PK) | ✔ | 5001 | 主キー |
-| user_id | BIGINT (**FK**) | ✔ | 1 | 所有ユーザー（→ `users.id`） |
-| encrypted_token | VARCHAR(191) | ✔ / UNIQUE | `hash_xxx` | ハッシュ化トークン |
-| expires_at | DATETIME |  | 2025-12-31 23:59:59 | 失効日時 |
-| created_at | DATETIME | ✔ | 2025-08-10 12:00:00 | 登録日時 |
-| updated_at | DATETIME | ✔ | 2025-08-10 12:00:00 | 更新日時 |
-
-**インデックス例**：`UNIQUE(token_digest)` / `INDEX(user_id)` / `INDEX(expires_at)`
+| カラム名 | 型 | 制約 | 説明（カラムの役割） |
+|---|---|---|---|
+| id | BIGINT | PK | タグID。 |
+| name | VARCHAR(50) | NOT NULL, UNIQUE | タグ名（重複禁止）。例：`仕事`、`家族`、`健康`。 |
+| category | VARCHAR(30) |  | タグの種別。例：`topic`（話題）、`emotion`（感情系）、`value`（価値観軸）など。 |
+| created_at | DATETIME | NOT NULL | 登録日時。 |
+| updated_at | DATETIME | NOT NULL | 更新日時。 |
 
 ---
 
-### 5) `summaries`（**統合サマリ**：対象×期間×窓は固定、内容はJSONに集約）
-> **目的**：複雑な分岐を排し、DB制約で不整合を防ぐ。  
-> **ルール**：`period='session'` は **チャット単位**（`chat_id` 使用）、`daily/weekly/monthly` は **ユーザー単位**（`user_id` 使用）。
+### 3) chats（チャットセッション）
+> **目的**：1回の**対話セッション情報**（所有者・感情タグ・タイトル等）を保持する軽量コンテナ。本文はMongoDB側に格納します。  
+> **主なユースケース**：会話一覧表示、タイトル編集、タグによる絞り込み、セッション要約（`summaries`）の紐付け。
 
-| カラム名 | 型 | 必須 | 例 | 役割・格納値 |
-|---|---|---:|---|---|
-| id | BIGINT (PK) | ✔ | 9001 | 主キー |
-| term_type | ENUM('session','daily','weekly','monthly') | ✔ | daily | 粒度 |
-| chat_id | BIGINT (**FK**) | 条件付 | 101 | **`session` の時のみ必須**（→ `chats.id`） |
-| user_id | BIGINT (**FK**) | 条件付 | 1 | **`daily/weekly/monthly` の時のみ必須**（→ `users.id`） |
-| tally_start_at | DATETIME | ✔ | 2025-08-10 00:00:00 | 期間開始（UTC）。例：日次=当日0時、週次=週頭、月次=月初、セッション=チャット開始 |
-| tally_end_at | DATETIME | ✔ | 2025-08-10 00:00:00 | 期間開始（UTC）。例：日次=当日0時、週次=週頭、月次=月初、セッション=チャット開始 |
-| analysis_data | JSON | ✔ | `{...}` | サマリ本体（`summary/insights/sentiment_overview/metrics` を入れ子で保持） |
-| created_at | DATETIME | ✔ | 2025-08-10 12:00:00 | 登録日時 |
-| updated_at | DATETIME | ✔ | 2025-08-10 12:00:00 | 更新日時 |
-
-**一意キー**：`UNIQUE(target_type, target_key, period, window_start_at)`  
-**インデックス例**：`INDEX(target_type, target_key, period, generated_at)` / `INDEX(window_start_at, window_end_at)`
+| カラム名 | 型 | 制約 | 説明（カラムの役割） |
+|---|---|---|---|
+| id | BIGINT | PK | チャットID。Mongo側からは `"chat-<id>"` 形式で参照。 |
+| user_id | BIGINT | NOT NULL, FK→users.id | このチャットの所有ユーザー。 |
+| tag_id | BIGINT | NULL, FK→tags.id | 公式タグ（任意・1対1）。UIの絞り込みに使用。 |
+| title | VARCHAR(120) |  | セッションの自動/手動タイトル。 |
+| created_at | DATETIME | NOT NULL | 作成日時。 |
+| updated_at | DATETIME | NOT NULL | 更新日時。 |
 
 ---
 
-## ■ MongoDB（NoSQL：`messages_doc`）
+### 4) api_tokens（個人APIトークン）
+> **目的**：不透明トークン（ハッシュ化済）の保存による**端末認可/外部クライアント**アクセスの制御。即時失効や回収が容易です。  
+> **主なユースケース**：モバイル/デスクトップクライアントの継続ログイン、個人アクセストークン発行。
 
-> 型は概念表記（`string/number/boolean/date/datetime/array/object` など）
+| カラム名 | 型 | 制約 | 説明（カラムの役割） |
+|---|---|---|---|
+| id | BIGINT | PK | 主キー。 |
+| user_id | BIGINT | NOT NULL, FK→users.id | トークンの所有者。 |
+| encrypted_token | VARCHAR(191) | NOT NULL, UNIQUE | トークンのハッシュ（平文は保存しない）。 |
+| expires_at | DATETIME |  | 失効日時（期限切れ判定）。 |
+| created_at | DATETIME | NOT NULL | 発行日時。 |
+| updated_at | DATETIME | NOT NULL | 更新日時。 |
 
-### `messages_doc`（チェットメッセージ本文）
-| フィールド | 型 | 必須 | 例 | 役割・格納値 |
-|---|---|---|---|---|
-| _id | string (PK) | ✔ | `"msg_01FZ...ULID"` | ドキュメントID（ULID/UUID） |
-| chat_uid | string | ✔ | `"chat-101"` | **RDB `chats.id` の文字列化**（論理FK） |
-| user_id | number |  | 1/2 | ユーザー発話ならUSER_ID、AIは `null` |
-| speaker_role | string | ✔ | `"user"` | `user` / `system` |
-| content | string | ✔ | 今日は仕事で… | 本文（音声文字起こし含む） |
-| audio_url | string |  | `https://.../a.mp3` | 音声URL |
-| occurred_at | datetime | ✔ | `2025-08-10T12:02:10Z` | 発話時刻 |
-| llm_metadata | object |  | `{ "model":"gpt-4o", "tokens":532 }` | AIモデル・トークン情報 |
-| emotion_sentiment | number |  | `-1` | -1/0/1 |
-| emotion_primary | string |  | `"sad"` | 主感情 |
-| emotion_score | number |  | `0.73` | 強度 |
-| emotion_triggers | array\<string> |  | `["上司","納期"]` | きっかけ語 |
-| emotion_keywords | array\<string> |  | `["疲れ","寝不足"]` | キーワード |
 
-**推奨インデックス（MongoDB）**  
-- `{ chat_uid: 1, occurred_at: 1 }`（チャット時系列）  
-- `{ user_id: 1, occurred_at: -1 }`（ユーザー履歴）  
-- `{ tags: 1 }`（自由タグ）  
-- `text(content)`（当面の全文。将来は OpenSearch/Elasticsearch 併用を想定）
+---
+
+### 5) summaries（統合サマリ）
+> **目的**：**チャット単位（session）**または**ユーザー単位（日/週/月）**の要約・洞察・感情分布・メトリクスを**1レコードで一意**に保持。  
+> **主なユースケース**：日次/週次/月次のレポート画面、セッション要約の表示・再生成判定。
+
+| カラム名 | 型 | 制約 | 説明（カラムの役割） |
+|---|---|---|---|
+| id | BIGINT | PK | 主キー。 |
+| period | ENUM('session','daily','weekly','monthly') | NOT NULL | 集計粒度。 |
+| chat_id | BIGINT | 条件付, FK→chats.id | `period='session'` のとき必須（対象チャット）。 |
+| user_id | BIGINT | 条件付, FK→users.id | `period in ('daily','weekly','monthly')` のとき必須（対象ユーザー）。 |
+| tally_start_at | DATETIME | NOT NULL | バケット開始（UTC）。例：日次0:00、週次週頭、月次月初、セッション開始。 |
+| tally_end_at | DATETIME | NOT NULL | バケット終了（UTC）。UI/再集計の境界に利用。 |
+| analysis_data | JSON | NOT NULL | サマリ本体。例：`{ "summary": "...", "insights": {...}, "sentiment_overview": {...}, "metrics": {...} }` |
+| created_at | DATETIME | NOT NULL | 作成日時。 |
+| updated_at | DATETIME | NOT NULL | 更新日時。 |
+
+
+---
+
+## NoSQL（MongoDB）
+
+### messages_doc（メッセージ本文＋感情メタ）
+> **目的**：可変スキーマで増え続ける**発話本文と感情強度**を保存。  
+> **主なユースケース**：チャット画面の時系列チャット全件表示、要約/集計（`summaries`）の種。
+
+| フィールド | 型 | 必須 | 説明（カラムの役割） |
+|---|---|:---:|---|
+| _id | string | ✔ | ドキュメントID（ULID/UUID）。 |
+| chat_uid | string | ✔ | RDB `chats.id` を `"chat-<id>"` で文字列化した論理FK。 |
+| sender_id | number | ✔ | メッセージ送信者。ユーザーID（AIメッセージ送信時は `sys`+`ユーザーID`）。 |
+| content | string | ✔ | 本文（テキスト／音声起こし結果）。 |
+| llm_metadata | object |  | 生成モデル・トークン数・プロンプト情報など任意メタ。 |
+| emotion_score | number |  | 感情強度（0〜1）。 |
+| emotion_keywords | array\<string> |  | キーワード（きっかけ語 例：`["上司","納期"]`）。 |
+
 
 ---
 
@@ -130,7 +124,7 @@ erDiagram
   %% ========== RDB (MySQL) ==========
   users {
     int      id PK
-    string   username
+    string   name
     string   email
     string   encrypted_password
     boolean  is_active
@@ -166,7 +160,7 @@ erDiagram
 
   summaries {
     int      id PK
-    string   term_type
+    string   period
     int      chat_id FK
     int      user_id FK
     datetime tally_start_at
@@ -180,27 +174,20 @@ erDiagram
   messages_doc {
     string   _id PK
     string   chat_uid
-    int      user_id
-    string   speaker_role
+    int      sender_id
     string   content
-    string   audio_url
-    datetime occurred_at
     string   llm_metadata
-    int      emotion_sentiment
-    string   emotion_primary
     float    emotion_score
-    string   emotion_triggers
     string   emotion_keywords
   }
 
-  %% ========== Relationships with compact FK labels ==========
-  users ||--o{ chats       : FK-user_id
-  tags  ||--o{ chats       : FK-tag_id_to
-  users ||--o{ api_tokens  : FK-user_id
-
-  chats ||--o{ summaries   : FK-chat_id
-  users ||--o{ summaries   : FK-user_id
+  %% ========== Relationships with FK labels ==========
+  users ||--o{ chats       : FK-users．id
+  tags  ||--o{ chats       : FK-tags．id
+  users ||--o{ api_tokens  : FK-users．id
+  chats ||--o{ summaries   : FK-chats．id
+  users ||--o{ summaries   : FK-users．id
 
   %% Logical links across RDB and MongoDB
-  chats ||--o{ messages_doc : LOGICAL-chat_uid
-  users ||--o{ messages_doc : LOGICAL-user_id
+  chats ||--o{ messages_doc : LOGICAL-chats．id
+  users ||--o{ messages_doc : LOGICAL-users．id
