@@ -47,7 +47,7 @@ services:
 
   web:
     build: .
-    command: bash -c "cd backend && bundle exec rails server -b 0.0.0.0"
+    command: bash -c "cd backend && bundle install && bundle exec rails server -b 0.0.0.0"
     volumes:
       - .:/app
       - bundle_data:/usr/local/bundle
@@ -72,9 +72,28 @@ services:
     stdin_open: true
     tty: true
 
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    command: sh -c "cd frontend && npm install && npm run dev"
+    volumes:
+      - ./frontend:/app/frontend
+      - frontend_node_modules:/app/frontend/node_modules
+      - frontend_next:/app/frontend/.next
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+    stdin_open: true
+    tty: true
+
 volumes:
   postgres_data:
   mongodb_data:
   redis_data:
   bundle_data:
   node_modules:
+  frontend_node_modules:
+  frontend_next:
