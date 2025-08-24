@@ -10,8 +10,70 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 0) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_24_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
+  # Custom types defined in this database.
+  # Note that some types may not work with other database engines. Be careful if changing database.
+  create_enum "period_type", ["session", "daily", "weekly", "monthly"]
+
+  create_table "api_tokens", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "encrypted_token", limit: 191, null: false
+    t.datetime "expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["encrypted_token"], name: "index_api_tokens_on_encrypted_token", unique: true
+    t.index ["user_id"], name: "index_api_tokens_on_user_id"
+  end
+
+  create_table "chats", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "tag_id"
+    t.string "title", limit: 120
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tag_id"], name: "index_chats_on_tag_id"
+    t.index ["user_id"], name: "index_chats_on_user_id"
+  end
+
+  create_table "summaries", force: :cascade do |t|
+    t.enum "period", null: false, enum_type: "period_type"
+    t.bigint "chat_id"
+    t.bigint "user_id"
+    t.datetime "tally_start_at", null: false
+    t.datetime "tally_end_at", null: false
+    t.json "analysis_data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chat_id", "period"], name: "index_summaries_on_chat_id_and_period"
+    t.index ["chat_id"], name: "index_summaries_on_chat_id"
+    t.index ["user_id", "period", "tally_start_at"], name: "index_summaries_on_user_id_and_period_and_tally_start_at"
+    t.index ["user_id"], name: "index_summaries_on_user_id"
+  end
+
+  create_table "tags", force: :cascade do |t|
+    t.string "name", limit: 50, null: false
+    t.string "category", limit: 30
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_tags_on_name", unique: true
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.string "name", limit: 50, null: false
+    t.string "email", limit: 255, null: false
+    t.string "encrypted_password", limit: 255, null: false
+    t.boolean "is_active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_users_on_email", unique: true
+  end
+
+  add_foreign_key "api_tokens", "users"
+  add_foreign_key "chats", "tags"
+  add_foreign_key "chats", "users"
+  add_foreign_key "summaries", "chats"
+  add_foreign_key "summaries", "users"
 end
