@@ -46,7 +46,9 @@ services:
       retries: 5
 
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
     command: bash -c "cd backend && bundle install && bundle exec rails server -b 0.0.0.0"
     volumes:
       - .:/app

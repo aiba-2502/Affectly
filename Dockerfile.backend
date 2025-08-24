@@ -23,10 +23,6 @@ WORKDIR /app
 # Install Rails 8
 RUN gem install rails -v "~> 8.0.0"
 
-# Copy Gemfile (will be created by rails new)
-# COPY Gemfile Gemfile.lock ./
-# RUN bundle install
-
 # Add a script to handle Rails setup
 RUN echo '#!/bin/bash\n\
 set -e\n\
