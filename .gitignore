@@ -22,3 +22,7 @@ Desktop.ini
 *.swp
 *.swo
 *.~*
+
+# Docker関連
+.env
+*.log
