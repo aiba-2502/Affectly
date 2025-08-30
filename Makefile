@@ -118,23 +118,23 @@ shell-redis: ## Redisコンテナにアクセス
 # =====================================
 
 db-init: ## データベースを初期化（作成＋マイグレーション）
-	docker compose  exec web bash -c "cd backend && bundle exec rails db:create"
-	docker compose  exec web bash -c "cd backend && bundle exec rails db:migrate"
+	docker compose  exec web bash -c "bundle exec rails db:create"
+	docker compose  exec web bash -c "bundle exec rails db:migrate"
 
 db-migrate: ## マイグレーションを実行
-	docker compose  exec web bash -c "cd backend && bundle exec rails db:migrate"
+	docker compose  exec web bash -c "bundle exec rails db:migrate"
 
 db-rollback: ## マイグレーションをロールバック
-	docker compose  exec web bash -c "cd backend && bundle exec rails db:rollback"
+	docker compose  exec web bash -c "bundle exec rails db:rollback"
 
 db-seed: ## シードデータを投入
-	docker compose  exec web bash -c "cd backend && bundle exec rails db:seed"
+	docker compose  exec web bash -c "bundle exec rails db:seed"
 
 db-reset: ## データベースをリセット（警告: 全データ削除）
 	@echo "⚠️  警告: この操作は全てのデータを削除します！"
 	@echo "続行するには5秒以内にCtrl+Cで中断してください..."
 	@sleep 5
-	docker compose  exec web bash -c "cd backend && bundle exec rails db:drop db:create db:migrate"
+	docker compose  exec web bash -c "bundle exec rails db:drop db:create db:migrate"
 	@echo " データベースのリセットが完了しました"
 
 db-console: ## PostgreSQL コンソールにアクセス
@@ -151,13 +151,13 @@ db-console: ## PostgreSQL コンソールにアクセス
 # =====================================
 
 rails-console: ## Rails コンソールを起動
-	docker compose  exec web bash -c "cd backend && bundle exec rails console"
+	docker compose  exec web bash -c "bundle exec rails console"
 
 rails-routes: ## Rails ルートを表示
-	docker compose  exec web bash -c "cd backend && bundle exec rails routes"
+	docker compose  exec web bash -c "bundle exec rails routes"
 
 bundle-install: ## Gemをインストール
-	docker compose  exec web bash -c "cd backend && bundle install"
+	docker compose  exec web bash -c "bundle install"
 
 npm-install: ## npm パッケージをインストール
 	docker compose  exec frontend sh -c "cd frontend && npm install"
@@ -171,13 +171,13 @@ dev: up logs ## 開発環境を起動してログを表示
 test: test-backend ## backendのテストを実行（エイリアス）
 
 test-backend: ## backendのテストを実行
-	docker compose  exec web bash -c "cd backend && bundle exec rails test"
+	docker compose  exec web bash -c "bundle exec rails test"
 
 test-frontend: ## frontendのテストを実行
 	docker compose  exec frontend sh -c "cd frontend && npm test"
 
 test-cov: ## カバレッジ付きでテストを実行
-	docker compose  exec web bash -c "cd backend && bundle exec rails test:coverage"
+	docker compose  exec web bash -c "bundle exec rails test:coverage"
 
 # =====================================
 # コード品質チェック
@@ -185,14 +185,14 @@ test-cov: ## カバレッジ付きでテストを実行
 
 lint: ## Lintチェックを実行
 	@echo "🔍 Backend (Rubocop):"
-	docker compose  exec web bash -c "cd backend && bundle exec rubocop"
+	docker compose  exec web bash -c "bundle exec rubocop"
 	@echo ""
 	@echo "🔍 Frontend (ESLint):"
 	docker compose  exec frontend sh -c "cd frontend && npm run lint"
 
 format: ## コードをフォーマット
 	@echo "📝 Backend (Rubocop):"
-	docker compose  exec web bash -c "cd backend && bundle exec rubocop -a"
+	docker compose  exec web bash -c "bundle exec rubocop -a"
 	@echo ""
 	@echo "📝 Frontend (Prettier):"
 	docker compose  exec frontend sh -c "cd frontend && npm run format"
