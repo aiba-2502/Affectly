@@ -17,33 +17,35 @@ services:
       timeout: 5s
       retries: 5
 
-  mongodb:
-    image: mongo:7.0
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: password
-      MONGO_INITDB_DATABASE: kokoro_log_development
-    volumes:
-      - mongodb_data:/data/db
-    ports:
-      - "27017:27017"
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 5s
-      timeout: 5s
-      retries: 5
+  # MongoDB - 将来的に使用する可能性があるため保持（現在は未使用）
+  # mongodb:
+  #   image: mongo:7.0
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: root
+  #     MONGO_INITDB_ROOT_PASSWORD: password
+  #     MONGO_INITDB_DATABASE: kokoro_log_development
+  #   volumes:
+  #     - mongodb_data:/data/db
+  #   ports:
+  #     - "27017:27017"
+  #   healthcheck:
+  #     test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+  # Redis - 将来的に使用する可能性があるため保持（現在は未使用）
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
 
   web:
     build:
@@ -59,17 +61,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      mongodb:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      # MongoDB/Redisは現在未使用のためコメントアウト
+      # mongodb:
+      #   condition: service_healthy
+      # redis:
+      #   condition: service_healthy
     environment:
       DATABASE_HOST: db
       DATABASE_USER: postgres
       DATABASE_PASSWORD: password
       DATABASE_NAME: kokoro_log_development
-      MONGODB_URI: mongodb://root:password@mongodb:27017/kokoro_log_development?authSource=admin
-      REDIS_URL: redis://redis:6379/0
+      # 将来的に使用する可能性があるため環境変数は保持
+      # MONGODB_URI: mongodb://root:password@mongodb:27017/kokoro_log_development?authSource=admin
+      # REDIS_URL: redis://redis:6379/0
       RAILS_ENV: development
     stdin_open: true
     tty: true
@@ -87,14 +91,15 @@ services:
       - "3001:3000"
     environment:
       NODE_ENV: development
-      NEXT_PUBLIC_API_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
     stdin_open: true
     tty: true
 
 volumes:
   postgres_data:
-  mongodb_data:
-  redis_data:
+  # MongoDB/Redisボリューム - 将来的に使用する可能性があるため保持
+  # mongodb_data:
+  # redis_data:
   bundle_data:
   node_modules:
   frontend_node_modules:

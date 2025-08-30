@@ -5,6 +5,7 @@ class Chat < ApplicationRecord
   belongs_to :user
   belongs_to :tag, optional: true
   has_many :summaries, dependent: :destroy
+  has_many :messages, dependent: :destroy  # RDB版メッセージとの関連
 
   # Validations
   validates :title, length: { maximum: 120 }, allow_blank: true
@@ -27,18 +28,23 @@ class Chat < ApplicationRecord
     "chat-#{id}"
   end
 
-  # MongoDB連携用メソッド（将来的にMongoidと連携）
+  # メッセージ関連メソッド（RDB版）
   def messages_count
-    # TODO: MongoDBのmessages_docコレクションから取得
-    # MessagesDoc.where(chat_uid: chat_uid).count
-    0
+    messages.count
   end
 
   def latest_message
-    # TODO: MongoDBから最新メッセージを取得
-    # MessagesDoc.where(chat_uid: chat_uid).order(send_at: :desc).first
-    nil
+    messages.order(sent_at: :desc).first
   end
+  
+  # MongoDB連携用メソッド（将来的な移行用に保持）
+  # def messages_doc_count
+  #   MessagesDoc.where(chat_uid: chat_uid).count
+  # end
+  #
+  # def latest_message_doc
+  #   MessagesDoc.where(chat_uid: chat_uid).order(send_at: :desc).first
+  # end
 
   def has_summary?
     summaries.where(period: 'session').exists?

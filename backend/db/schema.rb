@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_24_150000) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_29_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -36,6 +36,23 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_24_150000) do
     t.datetime "updated_at", null: false
     t.index ["tag_id"], name: "index_chats_on_tag_id"
     t.index ["user_id"], name: "index_chats_on_user_id"
+  end
+
+  create_table "messages", force: :cascade do |t|
+    t.bigint "chat_id", null: false
+    t.bigint "sender_id", null: false
+    t.text "content", null: false
+    t.json "llm_metadata"
+    t.decimal "emotion_score", precision: 3, scale: 2
+    t.json "emotion_keywords"
+    t.datetime "sent_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chat_id", "sent_at"], name: "idx_messages_chat_sent"
+    t.index ["chat_id"], name: "index_messages_on_chat_id"
+    t.index ["sender_id"], name: "index_messages_on_sender_id"
+    t.index ["sent_at"], name: "index_messages_on_sent_at"
+    t.check_constraint "emotion_score >= 0::numeric AND emotion_score <= 1::numeric", name: "chk_emotion_score"
   end
 
   create_table "summaries", force: :cascade do |t|
@@ -74,6 +91,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_24_150000) do
   add_foreign_key "api_tokens", "users"
   add_foreign_key "chats", "tags"
   add_foreign_key "chats", "users"
+  add_foreign_key "messages", "chats"
+  add_foreign_key "messages", "users", column: "sender_id"
   add_foreign_key "summaries", "chats"
   add_foreign_key "summaries", "users"
 end
