@@ -26,3 +26,6 @@ Desktop.ini
 # Docker関連
 .env
 *.log
+
+# 認証・セッション関連
+cookies.txt

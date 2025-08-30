@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class User < ApplicationRecord
+  has_secure_password
+  
   # Associations
   has_many :chats, dependent: :destroy
   has_many :api_tokens, dependent: :destroy
@@ -13,7 +15,7 @@ class User < ApplicationRecord
                     length: { maximum: 255 },
                     uniqueness: { case_sensitive: false },
                     format: { with: URI::MailTo::EMAIL_REGEXP }
-  validates :encrypted_password, presence: true, length: { maximum: 255 }
+  validates :password, presence: true, length: { minimum: 6 }, allow_nil: true
   validates :is_active, inclusion: { in: [true, false] }
 
   # Callbacks
