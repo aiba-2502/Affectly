@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Login() {
   const router = useRouter();
+  const { checkAuth } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -32,6 +34,8 @@ export default function Login() {
         // トークンをローカルストレージに保存
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
+        // AuthContextを更新
+        await checkAuth();
         // ログイン成功 - Hello World画面へ遷移
         router.push('/');
       } else {

@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Signup() {
   const router = useRouter();
+  const { checkAuth } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,12 +35,9 @@ export default function Signup() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          user: {
-            name,
-            email,
-            password,
-            password_confirmation: passwordConfirmation,
-          },
+          name,
+          email,
+          password,
         }),
       });
 
@@ -48,6 +47,8 @@ export default function Signup() {
         // トークンをローカルストレージに保存
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
+        // AuthContextを更新
+        await checkAuth();
         // 登録成功 - Hello World画面へ遷移
         router.push('/');
       } else {
