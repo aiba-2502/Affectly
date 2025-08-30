@@ -212,6 +212,58 @@ clean-all: ## 全て削除（警告: データも削除）
 	@echo " クリーンアップが完了しました"
 
 # =====================================
+# t3.micro向けコマンド（メモリ最適化）
+# =====================================
+
+prod-up: ## t3.micro向け: 段階的にサービスを起動（メモリ負荷分散）
+	@echo "t3.micro向けに段階的起動を開始..."
+	@echo "データベースを起動中..."
+	docker compose -f docker-compose.prod.yml up -d db
+	@echo "DBの起動を待機中..."
+	@sleep 15
+	@echo "バックエンドを起動中..."
+	docker compose -f docker-compose.prod.yml up -d web
+	@echo "バックエンドの起動を待機中..."
+	@sleep 15
+	@echo "フロントエンドを起動中..."
+	docker compose -f docker-compose.prod.yml up -d frontend
+	@echo "✅ 全サービスの起動完了！"
+	docker compose -f docker-compose.prod.yml ps
+
+prod-down: ## t3.micro向け: 全サービスを停止
+	docker compose -f docker-compose.prod.yml down
+
+prod-restart: ## t3.micro向け: 全サービスを再起動
+	@make prod-down
+	@make prod-up
+
+prod-logs: ## t3.micro向け: ログを表示（フォロー）
+	docker compose -f docker-compose.prod.yml logs -f
+
+prod-ps: ## t3.micro向け: コンテナの状態を表示
+	docker compose -f docker-compose.prod.yml ps
+
+prod-db-init: ## t3.micro向け: データベースを初期化
+	@echo "🗄️ データベースを初期化中..."
+	docker compose -f docker-compose.prod.yml exec web bash -c "bundle exec rails db:create db:migrate"
+	@echo "✅ データベース初期化完了！"
+
+prod-init: ## t3.micro向け: 初回セットアップ（段階的起動＋DB初期化）
+	@echo "t3.micro向け初回セットアップを開始..."
+	@make prod-up
+	@echo "サービスの安定を待機中..."
+	@sleep 10
+	@make prod-db-init
+	@echo "✅ セットアップ完了！"
+	@echo ""
+	@echo "アクセス可能なURL:"
+	@echo "  - Frontend: http://YOUR_EC2_IP:3001"
+	@echo "  - Backend API: http://YOUR_EC2_IP:3000"
+
+prod-clean: ## t3.micro向け: 停止してボリュームを削除
+	docker compose -f docker-compose.prod.yml down -v
+
+# =====================================
 # ユーティリティ
 # =====================================
 

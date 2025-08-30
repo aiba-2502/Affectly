@@ -127,8 +127,8 @@ docker compose -f docker-compose.prod.yml ps
 ### 7. データベースの初期化
 
 ```bash
-# マイグレーション実行
-docker compose -f docker-compose.prod.yml exec web bash -c "cd backend && bundle exec rails db:create db:migrate"
+# マイグレーション実行（コンテナ内のワーキングディレクトリは既に/app）
+docker compose -f docker-compose.prod.yml exec web bash -c "bundle exec rails db:create db:migrate"
 ```
 
 ## 🔥 緊急対策：SSH接続が切れた場合
