@@ -6,7 +6,7 @@
 .PHONY: db-init db-migrate db-rollback db-seed db-reset db-console
 .PHONY: test test-backend test-frontend test-cov lint format
 .PHONY: dev setup init clean clean-all
-.PHONY: bundle-install npm-install rails-console rails-routes
+.PHONY: bundle-install bundle npm-install rails-console rails-routes
 .PHONY: health status mongo-shell redis-cli
 
 # デフォルトターゲット
@@ -158,6 +158,8 @@ rails-routes: ## Rails ルートを表示
 
 bundle-install: ## Gemをインストール
 	docker compose  exec web bash -c "bundle install"
+
+bundle: bundle-install ## bundle-installのエイリアス
 
 npm-install: ## npm パッケージをインストール
 	docker compose  exec frontend sh -c "cd frontend && npm install"
