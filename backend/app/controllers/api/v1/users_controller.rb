@@ -8,15 +8,7 @@ module Api
       end
 
       def update
-        # パスワード変更の場合、現在のパスワードを確認
-        if params[:password].present?
-          unless params[:current_password].present? && @current_user.authenticate(params[:current_password])
-            render json: { error: '現在のパスワードが正しくありません' }, status: :unprocessable_entity
-            return
-          end
-        end
-
-        # ユーザー情報を更新
+        # ユーザー情報を更新（名前とメールのみ）
         if @current_user.update(user_update_params)
           render json: { 
             user: user_response(@current_user),
@@ -33,9 +25,7 @@ module Api
       private
 
       def user_update_params
-        permitted = [:name, :email]
-        permitted << :password if params[:password].present?
-        params.permit(*permitted)
+        params.permit(:name, :email)
       end
 
       def user_response(user)
