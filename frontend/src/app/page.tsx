@@ -29,16 +29,10 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       <h1 className="text-4xl font-bold mb-4">心のログ - Kokoro Log</h1>
-      <p className="text-lg mb-2">ようこそ、{user.email}さん</p>
-      <button
-        onClick={() => {
-          localStorage.removeItem('token');
-          router.push('/login');
-        }}
-        className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-      >
-        ログアウト
-      </button>
+      <p className="text-lg mb-2">ようこそ、{user.name || user.email}さん</p>
+      <p className="text-gray-600 mt-4">
+        チャット機能は現在開発中です
+      </p>
     </div>
   );
 }
