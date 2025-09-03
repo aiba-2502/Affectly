@@ -162,7 +162,7 @@ bundle-install: ## Gemをインストール
 bundle: bundle-install ## bundle-installのエイリアス
 
 npm-install: ## npm パッケージをインストール
-	docker compose  exec frontend sh -c "cd frontend && npm install"
+	docker compose  exec frontend npm install
 
 dev: up logs ## 開発環境を起動してログを表示
 

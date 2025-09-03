@@ -146,11 +146,16 @@ export default function Signup() {
           </button>
         </form>
 
-        <div className="text-center">
+        <div className="text-center space-y-2">
           <p className="text-sm text-gray-600">
             既にアカウントをお持ちの方は
             <Link href="/login" className="ml-1 text-blue-600 hover:underline">
               ログイン
+            </Link>
+          </p>
+          <p className="text-sm text-gray-600">
+            <Link href="/information" className="text-blue-600 hover:underline">
+              アプリの使い方を見る
             </Link>
           </p>
         </div>

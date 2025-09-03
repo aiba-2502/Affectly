@@ -20,6 +20,9 @@ Rails.application.routes.draw do
       # User routes
       get 'users/me', to: 'users#me'
       patch 'users/me', to: 'users#update'
+      
+      # Information routes
+      get 'information', to: 'information#index'
     end
   end
 end

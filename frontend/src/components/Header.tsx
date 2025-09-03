@@ -36,6 +36,9 @@ export default function Header() {
             <Link href="/mypage" className="text-gray-700 hover:text-gray-900">
               マイページ
             </Link>
+            <Link href="/information" className="text-gray-700 hover:text-gray-900">
+              使い方
+            </Link>
           </nav>
 
           <div className="hidden md:flex items-center space-x-4">
@@ -82,6 +85,12 @@ export default function Header() {
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
               >
                 マイページ
+              </Link>
+              <Link
+                href="/information"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+              >
+                使い方
               </Link>
               <div className="border-t border-gray-200 pt-2">
                 <div className="px-3 py-2 text-sm text-gray-700">

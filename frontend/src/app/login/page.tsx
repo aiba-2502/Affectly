@@ -99,11 +99,16 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="text-center">
+        <div className="text-center space-y-2">
           <p className="text-sm text-gray-600">
             アカウントをお持ちでない方は
             <Link href="/signup" className="ml-1 text-blue-600 hover:underline">
               新規登録
+            </Link>
+          </p>
+          <p className="text-sm text-gray-600">
+            <Link href="/information" className="text-blue-600 hover:underline">
+              アプリの使い方を見る
             </Link>
           </p>
         </div>
