@@ -58,8 +58,8 @@ module Api
       end
 
       def generate_jwt_token(user)
-        payload = { user_id: user.id, exp: 24.hours.from_now.to_i }
-        JWT.encode(payload, Rails.application.credentials.secret_key_base || 'development_secret')
+        payload = { user_id: user.id }
+        JsonWebToken.encode(payload)
       end
 
       def authenticate_user!
@@ -67,9 +67,11 @@ module Api
         return render json: { error: 'Token not provided' }, status: :unauthorized unless token
 
         begin
-          payload = JWT.decode(token, Rails.application.credentials.secret_key_base || 'development_secret', true, algorithm: 'HS256').first
-          @current_user = User.find(payload['user_id'])
-        rescue JWT::DecodeError, ActiveRecord::RecordNotFound
+          payload = JsonWebToken.decode(token)
+          return render json: { error: 'Invalid token' }, status: :unauthorized unless payload
+          
+          @current_user = User.find(payload[:user_id])
+        rescue ActiveRecord::RecordNotFound
           render json: { error: 'Invalid token' }, status: :unauthorized
         end
       end

@@ -23,6 +23,13 @@ Rails.application.routes.draw do
       
       # Information routes
       get 'information', to: 'information#index'
+      
+      # Chat routes
+      resources :chats, only: [:create, :index, :destroy] do
+        collection do
+          get 'sessions'
+        end
+      end
     end
   end
 end

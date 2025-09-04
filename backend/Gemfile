@@ -51,3 +51,8 @@ group :development, :test do
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
 end
+
+gem "ruby-openai", "~> 8.3"
+gem "httparty", "~> 0.23.1"
+
+gem "kaminari", "~> 1.2"
