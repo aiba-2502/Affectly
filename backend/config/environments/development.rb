@@ -47,6 +47,14 @@ Rails.application.configure do
   # Highlight code that triggered database queries in logs.
   config.active_record.verbose_query_logs = true
 
+  # Allow access from Docker container hostnames
+  config.hosts = [
+    "localhost",
+    "web",
+    /.*\.local/,
+    IPAddr.new("0.0.0.0/0"), # Allow all IP addresses in development
+  ]
+
   # Append comments with runtime information tags to SQL queries in logs.
   config.active_record.query_log_tags_enabled = true
 
