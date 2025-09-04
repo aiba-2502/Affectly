@@ -65,7 +65,7 @@ export default function BottomNav() {
                   }`}
                 >
                   <Icon className={`transition-all duration-200 ${
-                    isActive ? 'w-7 h-7' : 'w-6 h-6'
+                    isActive ? 'w-9 h-9' : 'w-8 h-8'
                   }`} />
                   <span className={`text-xs font-medium mt-1 transition-all duration-200 ${
                     isActive ? 'text-blue-600' : 'text-gray-500'
