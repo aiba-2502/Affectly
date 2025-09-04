@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import dynamic from 'next/dynamic';
+import BottomNav from '@/components/BottomNav';
 
 // Live2Dコンポーネントを動的インポート（SSR無効化 + ローディング表示）
 const Live2DComponent = dynamic(() => import('@/components/Live2DComponent'), {
@@ -52,13 +53,14 @@ export default function Home() {
   return (
     <>
       {showLive2D && <Live2DComponent />}
-      <div className="flex flex-col items-center justify-center min-h-screen relative z-10 pt-16">
+      <div className="flex flex-col items-center justify-center min-h-screen relative z-10 pt-16 pb-24">
         <h1 className="text-4xl font-bold mb-4">心のログ - Kokoro Log</h1>
         <p className="text-lg mb-2">ようこそ、{user.name || user.email}さん</p>
         <p className="text-gray-600 mt-4">
-          チャット機能は現在開発中です
+          下のナビゲーションからチャット機能をご利用ください
         </p>
       </div>
+      <BottomNav />
     </>
   );
 }
