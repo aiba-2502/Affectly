@@ -52,7 +52,7 @@ export default function Home() {
   return (
     <>
       {showLive2D && <Live2DComponent />}
-      <div className="flex flex-col items-center justify-center min-h-screen relative z-10">
+      <div className="flex flex-col items-center justify-center min-h-screen relative z-10 pt-16">
         <h1 className="text-4xl font-bold mb-4">心のログ - Kokoro Log</h1>
         <p className="text-lg mb-2">ようこそ、{user.name || user.email}さん</p>
         <p className="text-gray-600 mt-4">

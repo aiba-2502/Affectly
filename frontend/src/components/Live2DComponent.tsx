@@ -3,6 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Application, DisplayObject } from 'pixi.js';
 
+// Live2D\u30e2\u30c7\u30eb\u306e\u8a2d\u5b9a\u5b9a\u6570
+const LIVE2D_CONFIG = {
+  scale: 0.35,
+  horizontalOffset: 150,  // \u53f3\u5074\u3078\u306e\u30aa\u30d5\u30bb\u30c3\u30c8\uff08px\uff09
+  headerHeight: 64,       // \u30d8\u30c3\u30c0\u30fc\u306e\u9ad8\u3055\uff08px\uff09
+};
+
 const Live2DComponent = () => {
   const canvasContainerRef = useRef<HTMLCanvasElement>(null);
   const [app, setApp] = useState<Application | null>(null);
@@ -144,10 +151,11 @@ const Live2DComponent = () => {
       }
       
       // デフォルトのポジション設定
-      const scale = 0.3;
-      newModel.scale.set(scale);
-      newModel.x = currentApp.renderer.width / 2;
-      newModel.y = currentApp.renderer.height / 2;
+      newModel.scale.set(LIVE2D_CONFIG.scale);
+      
+      // キャラクターを中央に配置（水平オフセットあり）
+      newModel.x = currentApp.renderer.width / 2 + LIVE2D_CONFIG.horizontalOffset;
+      newModel.y = (currentApp.renderer.height + LIVE2D_CONFIG.headerHeight) / 2;
 
       modelRef.current = newModel;
       setModel(newModel);
@@ -173,10 +181,9 @@ const Live2DComponent = () => {
       );
 
       // リサイズ時にモデル位置を調整
-      const scale = 0.3;
-      model.scale.set(scale);
-      model.x = app.renderer.width / 2;
-      model.y = app.renderer.height / 2;
+      model.scale.set(LIVE2D_CONFIG.scale);
+      model.x = app.renderer.width / 2 + LIVE2D_CONFIG.horizontalOffset;
+      model.y = (app.renderer.height + LIVE2D_CONFIG.headerHeight) / 2;
     };
 
     window.addEventListener('resize', onResize);
@@ -187,14 +194,14 @@ const Live2DComponent = () => {
   }, [app, model]);
 
   return (
-    <div className="w-screen h-screen fixed top-0 left-0 pointer-events-none">
+    <div className="w-screen h-screen fixed top-0 left-0 pointer-events-none z-0">
       {error && (
-        <div className="absolute top-4 left-4 bg-red-100 text-red-700 p-2 rounded">
+        <div className="absolute top-20 left-4 bg-red-100 text-red-700 p-2 rounded z-10">
           {error}
         </div>
       )}
       {isLoading && (
-        <div className="absolute top-4 right-4 bg-blue-100 text-blue-700 p-2 rounded">
+        <div className="absolute top-20 right-4 bg-blue-100 text-blue-700 p-2 rounded z-10">
           Loading Live2D...
         </div>
       )}
