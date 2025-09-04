@@ -2,12 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  experimental: {
-    turbo: {
-      // Turbopackの最適化設定
-      resolveAlias: {
-        'pixi.js': 'pixi.js/dist/pixi.min.js',
-      },
+  // Turbopackの最新設定形式
+  turbopack: {
+    resolveAlias: {
+      'pixi.js': 'pixi.js/dist/pixi.min.js',
     },
   },
   // 画像の最適化

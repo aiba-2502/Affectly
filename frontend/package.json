@@ -4,7 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack --hostname 0.0.0.0",
+    "dev:webpack": "next dev --hostname 0.0.0.0",
+    "dev:precompile": "sh scripts/dev-with-precompile.sh",
     "build": "next build --turbopack",
+    "build:webpack": "next build",
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
