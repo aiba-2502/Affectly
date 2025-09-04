@@ -170,7 +170,9 @@ dev: up logs ## 開発環境を起動してログを表示
 # テスト
 # =====================================
 
-test: test-backend ## backendのテストを実行（エイリアス）
+test:  ## frontend・backendのテストを実行
+	docker compose  exec web bash -c "bundle exec rails test"
+	docker compose  exec frontend sh -c "cd frontend && npm test"
 
 test-backend: ## backendのテストを実行
 	docker compose  exec web bash -c "bundle exec rails test"
