@@ -77,7 +77,7 @@ class Api::V1::ChatsController < ApplicationController
                  current_user.chat_messages
                end
     
-    messages = messages.order(created_at: :desc)
+    messages = messages.order(created_at: :asc)
                        .page(params[:page])
                        .per(params[:per_page] || 20)
     

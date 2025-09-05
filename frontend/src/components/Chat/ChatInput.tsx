@@ -40,9 +40,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <div className="fixed bottom-16 left-0 right-0 bg-transparent z-30">
-      <div className="px-4 py-3">
-        <div className="flex items-end gap-3">
-          <div className="flex-1 relative">
+      <div className="px-6 sm:px-8 md:px-12 lg:px-16 py-3">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-end gap-3">
+            <div className="flex-1 relative">
             <textarea
               ref={textareaRef}
               value={message}
@@ -70,14 +71,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             >
               <PaperAirplaneIcon className="w-5 h-5 rotate-0" />
             </button>
+            </div>
           </div>
-        </div>
-        
-        {/* 注意書き（ChatGPT風） */}
-        <div className="text-xs text-gray-600 text-center mt-2">
+          
+          {/* 注意書き（ChatGPT風） */}
+          <div className="text-xs text-gray-600 text-center mt-2">
           <span className="bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1 inline-block">
             AIアシスタントは間違える可能性があります。重要な情報は確認してください。
           </span>
+          </div>
         </div>
       </div>
     </div>

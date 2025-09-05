@@ -132,7 +132,7 @@ export const ChatContainer: React.FC = () => {
       <div className="flex flex-col h-full relative z-10">
         {/* メッセージエリア */}
         <div className="flex-1 overflow-y-auto pb-40">
-          <div className="w-full py-6">
+          <div className="w-full py-6 px-6 sm:px-8 md:px-12 lg:px-16">
             {messages.length === 0 && (
               <div className="text-center mt-20 px-4">
                 <h2 className="text-2xl font-semibold text-gray-700 mb-2">
@@ -149,7 +149,7 @@ export const ChatContainer: React.FC = () => {
             ))}
             
             {isLoading && (
-              <div className="flex gap-3 mb-6 px-4">
+              <div className="flex gap-3 mb-6">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
                     <span className="text-white text-xs font-bold">AI</span>
@@ -168,7 +168,7 @@ export const ChatContainer: React.FC = () => {
             )}
             
             {error && (
-              <div className="mb-4 px-4">
+              <div className="mb-4">
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                   <p className="font-medium">エラーが発生しました</p>
                   <p className="text-sm">{error}</p>
