@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import dynamic from 'next/dynamic';
 import BottomNav from '@/components/BottomNav';
 
@@ -27,14 +27,10 @@ export default function Home() {
     }
   }, [user, isLoading, router]);
 
-  // Live2Dを遅延ロード（ページ表示後に読み込み）
+  // Live2Dを即座にロード（遅延削除）
   useEffect(() => {
     if (user) {
-      const timer = setTimeout(() => {
-        setShowLive2D(true);
-      }, 500); // 0.5秒後にLive2Dを読み込み開始
-
-      return () => clearTimeout(timer);
+      setShowLive2D(true);
     }
   }, [user]);
 

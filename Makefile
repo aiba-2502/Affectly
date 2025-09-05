@@ -22,33 +22,47 @@ help: ## このヘルプを表示
 # 初期セットアップ
 # =====================================
 
-init: ## プロジェクトを初期化（初回セットアップ）
-	@echo " プロジェクトを初期化中..."
-	@echo ""
-	@echo " コンテナをビルド中..."
+init: ## プロジェクトを初期化（Docker環境構築 + DB初期化）
+	@echo "プロジェクトを初期化中..."
 	@make build
-	@echo ""
-	@echo " サービスを起動中..."
 	@make up
-	@echo ""
-	@echo "⏳ データベースの準備完了を待機中..."
+	@echo "データベースの準備を待機中..."
 	@sleep 10
-	@echo ""
-	@echo "⏳  データベースを初期化中..."
 	@make db-init
-	@echo ""
 	@echo "✅ 初期化完了！"
 	@echo ""
-	@echo "以下にアクセスできます:"
-	@echo "  - Backend API: http://localhost:3000"
-	@echo "  - Frontend: http://localhost:3001"
-	@echo "  - PostgreSQL: localhost:5432"
-	@echo "  - MongoDB: localhost:27017"
-	@echo "  - Redis: localhost:6379"
+	@echo "アクセスURL:"
+	@echo "  Frontend: http://localhost:3001"
+	@echo "  Backend:  http://localhost:3000"
 	@echo ""
-	@echo "ログを表示: make logs"
+	@echo "次のコマンド: make logs（ログ表示）"
 
-setup: init ## initのエイリアス
+setup-env: ## 環境変数ファイルをテンプレートから作成
+	@[ -f backend/.env ] || (cp backend/.env.example backend/.env && echo "✅ backend/.env を作成しました")
+	@[ -f frontend/.env ] || (cp frontend/.env.example frontend/.env && echo "✅ frontend/.env を作成しました")
+	@[ -f backend/.env ] && [ -f frontend/.env ] && echo "環境変数ファイルの準備完了"
+
+generate-env-with-key: setup-env ## 環境変数ファイル作成 + JWT鍵生成
+	@if docker compose ps | grep -q "web.*running" > /dev/null 2>&1; then \
+		JWT_KEY=$$(docker compose exec -T web rails secret 2>/dev/null); \
+		echo "🔑 JWT Secret Key: $$JWT_KEY"; \
+		echo ""; \
+		echo "backend/.envのJWT_SECRET_KEYに上記の値を設定してください"; \
+	else \
+		echo "コンテナが起動していません。'make up' 後に 'make rails-secret' を実行してください"; \
+	fi
+
+quick-start: ## クイックスタート（環境変数作成 → Docker起動 → DB初期化）
+	@echo "🚀 クイックスタートを開始..."
+	@make setup-env
+	@make init
+	@make generate-env-with-key
+	@echo ""
+	@echo "✨ セットアップ完了！"
+	@echo "📝 次のステップ:"
+	@echo "  1. backend/.env と frontend/.env にAPIキーを設定"
+	@echo "  2. make restart で再起動"
+	@echo "  3. http://localhost:3001 にアクセス"
 
 # =====================================
 # Docker Compose操作
@@ -155,6 +169,14 @@ rails-console: ## Rails コンソールを起動
 
 rails-routes: ## Rails ルートを表示
 	docker compose  exec web bash -c "bundle exec rails routes"
+
+rails-secret: ## JWT用のシークレットキーを生成
+	@echo "🔐 Generating new secret key..."
+	@docker compose  exec web bash -c "bundle exec rails secret"
+	@echo ""
+	@echo "Copy the above key and set it in your .env file as JWT_SECRET_KEY"
+
+generate-jwt-key: rails-secret ## rails-secretのエイリアス
 
 bundle-install: ## Gemをインストール
 	docker compose  exec web bash -c "bundle install"

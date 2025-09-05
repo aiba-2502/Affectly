@@ -22,9 +22,10 @@ interface ChatStore {
 }
 
 const defaultSettings: ChatSettings = {
-  model: 'gpt-4o-mini',
-  temperature: 0.7,
-  max_tokens: 1000,
+  provider: (process.env.NEXT_PUBLIC_SELECT_AI_SERVICE as 'openai' | 'anthropic' | 'google') || 'openai',
+  model: process.env.NEXT_PUBLIC_SELECT_AI_MODEL || 'gpt-4o-mini',
+  temperature: parseFloat(process.env.NEXT_PUBLIC_TEMPERATURE || '0.7'),
+  max_tokens: parseInt(process.env.NEXT_PUBLIC_MAX_TOKENS || '1000'),
   system_prompt: '',
   api_key: undefined // バックエンドの環境変数を使用
 };

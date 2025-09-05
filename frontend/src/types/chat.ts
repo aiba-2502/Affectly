@@ -18,6 +18,7 @@ export interface ChatSession {
 export interface ChatRequest {
   content: string;
   session_id?: string;
+  provider?: 'openai' | 'anthropic' | 'google';
   api_key?: string;
   system_prompt?: string;
   model?: string;
@@ -32,6 +33,7 @@ export interface ChatResponse {
 }
 
 export interface ChatSettings {
+  provider: 'openai' | 'anthropic' | 'google';
   model: string;
   temperature: number;
   max_tokens: number;

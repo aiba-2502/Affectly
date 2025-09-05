@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@types/dompurify": "^3.0.5",
     "axios": "^1.11.0",
+    "dompurify": "^3.2.6",
     "next": "15.5.0",
     "pixi-live2d-display-lipsyncpatch": "^0.5.0-ls-7",
     "pixi.js": "^7.4.3",

@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ChatMessage as ChatMessageType } from '@/types/chat';
 import { UserCircleIcon } from '@heroicons/react/24/solid';
+import DOMPurify from 'dompurify';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -10,6 +11,16 @@ interface ChatMessageProps {
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const isUser = message.role === 'user';
+  
+  // XSS対策：メッセージ内容をサニタイズ
+  const sanitizedContent = useMemo(() => {
+    // DOMPurifyでHTMLタグを除去し、安全なテキストのみを残す
+    return DOMPurify.sanitize(message.content, { 
+      ALLOWED_TAGS: [], // すべてのHTMLタグを除去
+      ALLOWED_ATTR: [], // すべての属性を除去
+      KEEP_CONTENT: true // テキストコンテンツは保持
+    });
+  }, [message.content]);
   
   return (
     <div className={`flex gap-3 mb-6 ${isUser ? 'flex-row-reverse' : ''}`}>
@@ -36,7 +47,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
               : 'bg-white/90 backdrop-blur-sm text-gray-900 shadow-sm'
           }`}>
             <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
-              {message.content}
+              {sanitizedContent}
             </p>
           </div>
           

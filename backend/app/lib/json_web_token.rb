@@ -1,8 +1,14 @@
 class JsonWebToken
-  # 統一されたシークレットキーを使用
-  SECRET_KEY = 'development_secret_key_12345678901234567890'
+  # トークンの有効期限定数
+  DEFAULT_EXPIRATION = 24.hours
+  
+  # 環境変数からシークレットキーを取得
+  SECRET_KEY = ENV.fetch('JWT_SECRET_KEY') do
+    Rails.application.credentials.secret_key_base || 
+    Rails.application.secret_key_base
+  end
 
-  def self.encode(payload, exp = 24.hours.from_now)
+  def self.encode(payload, exp = DEFAULT_EXPIRATION.from_now)
     payload[:exp] = exp.to_i
     JWT.encode(payload, SECRET_KEY)
   end

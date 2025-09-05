@@ -45,9 +45,13 @@ export const ChatContainer: React.FC = () => {
       const timer = setTimeout(() => {
         setShowLive2D(true);
       }, 500);
-      // 初回読み込み時はエラーを無視（メッセージがない場合は401が返る可能性がある）
-      loadMessages().catch(() => {
-        // エラーは無視（新規セッションの可能性）
+      // メッセージ読み込み（エラーハンドリング改善）
+      loadMessages().catch((error) => {
+        // 401エラー以外はコンソールにログ出力
+        if (error?.response?.status !== 401) {
+          console.error('Failed to load messages:', error);
+        }
+        // 新規セッションの可能性があるため、エラーは表示しない
       });
       return () => clearTimeout(timer);
     }
@@ -101,6 +105,7 @@ export const ChatContainer: React.FC = () => {
       const response = await chatApi.sendMessage({
         content,
         session_id: sessionId,
+        provider: settings.provider,
         api_key: settings.api_key,
         model: settings.model,
         temperature: settings.temperature,

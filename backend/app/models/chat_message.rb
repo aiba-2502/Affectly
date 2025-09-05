@@ -2,7 +2,13 @@ class ChatMessage < ApplicationRecord
   belongs_to :user
   
   validates :content, presence: true
-  validates :role, presence: true, inclusion: { in: %w[user assistant system] }
+  validates :role, presence: true, inclusion: { 
+    in: [
+      AppConstants::MessageRole::USER,
+      AppConstants::MessageRole::ASSISTANT,
+      AppConstants::MessageRole::SYSTEM
+    ]
+  }
   validates :session_id, presence: true
   
   scope :by_session, ->(session_id) { where(session_id: session_id) }

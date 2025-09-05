@@ -53,6 +53,8 @@ group :development, :test do
 end
 
 gem "ruby-openai", "~> 8.3"
+gem "anthropic", "~> 0.3"
+gem "gemini-ai", "~> 4.2"
 gem "httparty", "~> 0.23.1"
 
 gem "kaminari", "~> 1.2"

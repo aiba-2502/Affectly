@@ -16,20 +16,25 @@ class Api::V1::ChatsController < ApplicationController
       }
     )
     
-    # 過去のメッセージを取得（最新10件）
+    # 過去のメッセージを取得
     past_messages = current_user.chat_messages
                                  .by_session(session_id)
                                  .order(created_at: :asc)
-                                 .last(10)
+                                 .last(AppConstants::MAX_PAST_MESSAGES)
     
-    # OpenAI APIを呼び出し
+    # AI APIを呼び出し
     begin
+      # プロバイダーを取得（デフォルトはOpenAI）
+      provider = chat_params[:provider].presence || 'openai'
+      
       # APIキーが指定されていない場合は環境変数から取得
-      api_key = chat_params[:api_key].presence || ENV['OPENAI_API_KEY']
-      openai_service = OpenaiService.new(api_key)
+      api_key = chat_params[:api_key].presence
+      
+      # AIサービスを初期化（新しいバージョンを使用）
+      ai_service = AiServiceV2.new(provider: provider, api_key: api_key)
       
       # メッセージを構築
-      messages = openai_service.build_messages(
+      messages = ai_service.build_messages(
         past_messages[0...-1], # 最後のメッセージ（今回のユーザーメッセージ）を除く
         chat_params[:system_prompt]
       )
@@ -38,7 +43,7 @@ class Api::V1::ChatsController < ApplicationController
       messages << { role: 'user', content: chat_params[:content] }
       
       # AIの応答を取得
-      ai_response = openai_service.chat(
+      ai_response = ai_service.chat(
         messages,
         model: chat_params[:model],
         temperature: chat_params[:temperature]&.to_f,
@@ -51,7 +56,8 @@ class Api::V1::ChatsController < ApplicationController
         role: 'assistant',
         session_id: session_id,
         metadata: {
-          model: chat_params[:model] || 'gpt-4o-mini',
+          model: ai_response['model'],
+          provider: ai_response['provider'],
           timestamp: Time.current.to_i
         }
       )
@@ -79,7 +85,7 @@ class Api::V1::ChatsController < ApplicationController
     
     messages = messages.order(created_at: :asc)
                        .page(params[:page])
-                       .per(params[:per_page] || 20)
+                       .per(params[:per_page] || AppConstants::DEFAULT_PAGE_SIZE)
     
     render json: {
       messages: messages.map { |msg| serialize_message(msg) },
@@ -124,7 +130,7 @@ class Api::V1::ChatsController < ApplicationController
   private
   
   def chat_params
-    params.permit(:content, :session_id, :api_key, :system_prompt, :model, :temperature, :max_tokens)
+    params.permit(:content, :session_id, :provider, :api_key, :system_prompt, :model, :temperature, :max_tokens)
   end
   
   def generate_session_id

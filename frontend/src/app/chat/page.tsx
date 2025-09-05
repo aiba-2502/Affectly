@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import BottomNav from '@/components/BottomNav';

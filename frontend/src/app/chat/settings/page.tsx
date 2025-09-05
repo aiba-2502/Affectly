@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useChatStore } from '@/stores/chatStore';
