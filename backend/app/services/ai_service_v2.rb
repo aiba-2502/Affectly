@@ -177,18 +177,12 @@ class AiServiceV2
   end
 
   def default_system_prompt
-    <<~PROMPT
-      あなたは「心のログ」というサービスのAIアシスタントです。
-      ユーザーの感情や思考を言語化し、整理するお手伝いをします。
-      以下の点を心がけてください：
-      
-      1. 共感的で温かい対応を心がける
-      2. ユーザーの感情を否定せず、受け止める
-      3. 適切な質問を通じて、思考を深掘りする
-      4. 簡潔で分かりやすい言葉を使う
-      5. 必要に応じて、感情や思考を整理・要約する
-      
-      ユーザーと対話しながら、自己理解を深められるようサポートしてください。
-    PROMPT
+    # YAMLファイル (config/prompts.yml) から取得
+    prompts_config = YAML.load_file(Rails.root.join('config', 'prompts.yml'))
+    env_prompts = prompts_config[Rails.env] || prompts_config['default']
+    env_prompts['system_prompt']
+  rescue => e
+    Rails.logger.error "Failed to load prompts.yml: #{e.message}"
+    raise "System prompt configuration not found. Please check config/prompts.yml"
   end
 end
