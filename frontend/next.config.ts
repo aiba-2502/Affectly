@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
       'pixi.js': 'pixi.js/dist/pixi.min.js',
     },
   },
+  // 実験的機能の有効化
+  experimental: {
+    optimizeCss: true, // CSS最適化
+    optimizePackageImports: ['pixi.js', 'pixi-live2d-display-lipsyncpatch'], // パッケージの最適化
+  },
   // 画像の最適化
   images: {
     formats: ['image/avif', 'image/webp'],

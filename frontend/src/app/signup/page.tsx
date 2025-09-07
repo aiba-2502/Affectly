@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 export default function Signup() {
   const router = useRouter();
@@ -28,7 +28,7 @@ export default function Signup() {
     }
 
     try {
-      const response = await fetch('http://localhost:3000/api/v1/auth/signup', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/v1/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

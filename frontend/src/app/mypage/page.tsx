@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 export default function MyPage() {
   const { user, isLoading, checkAuth } = useAuth();

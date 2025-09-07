@@ -72,7 +72,7 @@ export default function InformationPage() {
 
   const fetchInformation = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/v1/information');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/v1/information`);
       const data = await response.json();
       if (data.status === 'success') {
         setInformation(data.data);

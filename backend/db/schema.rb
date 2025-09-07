@@ -28,6 +28,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_30_000000) do
     t.index ["user_id"], name: "index_api_tokens_on_user_id"
   end
 
+  create_table "chat_messages", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.text "content"
+    t.string "role"
+    t.string "session_id"
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["role"], name: "index_chat_messages_on_role"
+    t.index ["session_id"], name: "index_chat_messages_on_session_id"
+    t.index ["user_id"], name: "index_chat_messages_on_user_id"
+  end
+
   create_table "chats", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "tag_id"
@@ -89,6 +102,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_30_000000) do
   end
 
   add_foreign_key "api_tokens", "users"
+  add_foreign_key "chat_messages", "users"
   add_foreign_key "chats", "tags"
   add_foreign_key "chats", "users"
   add_foreign_key "messages", "chats"
