@@ -75,7 +75,7 @@ down: ## 全サービスを停止
 	docker compose down
 
 build: ## 全サービスをビルド/再ビルド
-	docker compose build
+	docker compose build --no-cache
 
 restart: ## 全サービスを再起動
 	docker compose restart

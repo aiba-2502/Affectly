@@ -43,6 +43,12 @@ class Api::V1::ChatsController < ApplicationController
       messages << { role: 'user', content: chat_params[:content] }
       
       # AIの応答を取得
+      Rails.logger.info "=== AI PARAMS DEBUG ==="
+      Rails.logger.info "Received max_tokens: #{chat_params[:max_tokens]}"
+      Rails.logger.info "Converted max_tokens to integer: #{chat_params[:max_tokens]&.to_i}"
+      Rails.logger.info "Received temperature: #{chat_params[:temperature]}"
+      Rails.logger.info "Converted temperature to float: #{chat_params[:temperature]&.to_f}"
+      
       ai_response = ai_service.chat(
         messages,
         model: chat_params[:model],

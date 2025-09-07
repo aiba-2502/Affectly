@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import BottomNav from '@/components/BottomNav';
 import { ChatContainer } from '@/components/Chat/ChatContainer';
 import { useChatStore } from '@/stores/chatStore';
-import { Cog6ToothIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { PlusIcon } from '@heroicons/react/24/outline';
 
 export default function ChatPage() {
   const { user, isLoading } = useAuth();
@@ -44,13 +44,6 @@ export default function ChatPage() {
               title="新しいチャット"
             >
               <PlusIcon className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => router.push('/chat/settings')}
-              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              title="設定"
-            >
-              <Cog6ToothIcon className="w-5 h-5" />
             </button>
           </div>
         </div>
