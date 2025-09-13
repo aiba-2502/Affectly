@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { ChatSession } from '@/types/chat';
+import { ChatSession, Emotion } from '@/types/chat';
 import { chatApi } from '@/services/chatApi';
 import { useRouter } from 'next/navigation';
 import { useChatStore } from '@/stores/chatStore';
@@ -16,6 +16,7 @@ interface SearchParams {
   keyword: string;
   startDate: string;
   endDate: string;
+  selectedEmotions: string[];
 }
 
 export const HistoryList: React.FC = () => {
@@ -26,6 +27,7 @@ export const HistoryList: React.FC = () => {
     keyword: '',
     startDate: '',
     endDate: '',
+    selectedEmotions: [],
   });
   const router = useRouter();
   const { setSessionId, setMessages } = useChatStore();
@@ -94,6 +96,24 @@ export const HistoryList: React.FC = () => {
     }
   };
 
+  // 利用可能な全感情タグを収集
+  const availableEmotions = useMemo(() => {
+    const emotionMap = new Map<string, Emotion>();
+
+    sessions.forEach(session => {
+      if (session.emotions) {
+        session.emotions.forEach(emotion => {
+          if (!emotionMap.has(emotion.name)) {
+            emotionMap.set(emotion.name, emotion);
+          }
+        });
+      }
+    });
+
+    return Array.from(emotionMap.values())
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [sessions]);
+
   // フィルタリングされたセッション
   const filteredSessions = useMemo(() => {
     let filtered = [...sessions];
@@ -121,6 +141,20 @@ export const HistoryList: React.FC = () => {
       filtered = filtered.filter(session =>
         new Date(session.last_message_at) <= endDate
       );
+    }
+
+    // 感情タグフィルタ
+    if (searchParams.selectedEmotions && searchParams.selectedEmotions.length > 0) {
+      filtered = filtered.filter(session => {
+        if (!session.emotions || session.emotions.length === 0) {
+          return false;
+        }
+        // セッションが選択された感情のいずれかを含むかチェック
+        const sessionEmotionNames = session.emotions.map(e => e.name);
+        return searchParams.selectedEmotions.some(selectedEmotion =>
+          sessionEmotionNames.includes(selectedEmotion)
+        );
+      });
     }
 
     return filtered;
@@ -191,10 +225,13 @@ export const HistoryList: React.FC = () => {
   return (
     <div>
       {/* 検索ボックス - 常に表示 */}
-      <SearchBox onSearch={handleSearch} />
+      <SearchBox
+        onSearch={handleSearch}
+        availableEmotions={availableEmotions}
+      />
 
       {/* 検索結果の表示 */}
-      {(searchParams.keyword || searchParams.startDate || searchParams.endDate) && (
+      {(searchParams.keyword || searchParams.startDate || searchParams.endDate || searchParams.selectedEmotions.length > 0) && (
         <div className="mb-3 text-sm text-gray-600">
           検索結果: {filteredSessions.length}件
         </div>
