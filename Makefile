@@ -181,8 +181,6 @@ generate-jwt-key: rails-secret ## rails-secretのエイリアス
 bundle-install: ## Gemをインストール
 	docker compose  exec web bash -c "bundle install"
 
-bundle: bundle-install ## bundle-installのエイリアス
-
 npm-install: ## npm パッケージをインストール
 	docker compose  exec frontend npm install
 

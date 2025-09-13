@@ -2,18 +2,54 @@
 
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import BottomNav from '@/components/BottomNav';
+import { HistoryList } from '@/components/History/HistoryList';
+import dynamic from 'next/dynamic';
+import { PlusIcon } from '@heroicons/react/24/outline';
+import { useChatStore } from '@/stores/chatStore';
+
+// Live2Dコンポーネントを動的インポート（SSR無効化）- 履歴画面専用
+const Live2DHistoryComponent = dynamic(() => import('@/components/Live2DHistoryComponent'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-gray-400 text-center">
+        <div className="animate-pulse">
+          <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-2"></div>
+          <p className="text-xs">キャラクター準備中...</p>
+        </div>
+      </div>
+    </div>
+  ),
+});
 
 export default function HistoryPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const { newSession } = useChatStore();
+  const [showLive2D, setShowLive2D] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/login');
     }
   }, [user, isLoading, router]);
+
+  useEffect(() => {
+    // Live2Dを遅延ロード
+    if (user) {
+      const timer = setTimeout(() => {
+        setShowLive2D(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
+  const handleNewChat = () => {
+    newSession();
+    router.push('/chat');
+  };
 
   if (isLoading) {
     return (
@@ -29,12 +65,49 @@ export default function HistoryPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <div className="flex-1 flex items-center justify-center pb-24">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">履歴</h1>
-          <p className="text-gray-600">現在開発中です</p>
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 relative z-20">
+        <div className="flex justify-between items-center">
+          <h1 className="text-lg font-semibold text-gray-900">チャット履歴</h1>
+          <button
+            onClick={handleNewChat}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+            title="新しいチャット"
+          >
+            <PlusIcon className="w-5 h-5" />
+            <span className="text-sm">新規チャット</span>
+          </button>
         </div>
       </div>
+
+      {/* Main Content - 左右分割レイアウト */}
+      <div className="flex-1 flex relative overflow-hidden">
+        {/* Left Side - Live2D Character エリア - 拡大版 */}
+        <div className="w-80 lg:w-96 xl:w-[28rem] bg-gradient-to-br from-purple-50 to-pink-50 border-r border-gray-200 flex-shrink-0 relative">
+          <div className="absolute inset-4">
+            {showLive2D ? (
+              <Live2DHistoryComponent />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-gray-400 text-center">
+                  <div className="animate-pulse">
+                    <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-2"></div>
+                    <p className="text-xs">キャラクターを読み込み中...</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Side - History List */}
+        <div className="flex-1 overflow-y-auto bg-white">
+          <div className="container mx-auto px-4 py-6 max-w-4xl">
+            <HistoryList />
+          </div>
+        </div>
+      </div>
+
       <BottomNav />
     </div>
   );

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_30_000000) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_31_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -36,6 +36,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_30_000000) do
     t.jsonb "metadata", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "emotions", default: []
+    t.index ["emotions"], name: "index_chat_messages_on_emotions", using: :gin
     t.index ["role"], name: "index_chat_messages_on_role"
     t.index ["session_id"], name: "index_chat_messages_on_session_id"
     t.index ["user_id"], name: "index_chat_messages_on_user_id"

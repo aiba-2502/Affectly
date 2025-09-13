@@ -4,12 +4,27 @@ class Api::V1::ChatsController < ApplicationController
   def create
     # セッションIDの生成または取得
     session_id = params[:session_id] || generate_session_id
-    
-    # ユーザーメッセージを保存
+
+    # 感情を抽出（AIサービスを渡す）
+    provider = chat_params[:provider].presence || 'openai'
+    api_key = chat_params[:api_key].presence
+    ai_service_for_emotion = AiServiceV2.new(provider: provider, api_key: api_key)
+    emotion_service = EmotionExtractionService.new(ai_service: ai_service_for_emotion)
+
+    # 感情抽出を試みる（エラーが発生しても続行）
+    emotions = begin
+      emotion_service.extract_emotions(chat_params[:content])
+    rescue => e
+      Rails.logger.error "Emotion extraction failed: #{e.message}"
+      []
+    end
+
+    # ユーザーメッセージを保存（感情情報を含む）
     user_message = current_user.chat_messages.create!(
       content: chat_params[:content],
       role: 'user',
       session_id: session_id,
+      emotions: emotions,
       metadata: {
         timestamp: Time.current.to_i,
         device: request.user_agent
@@ -32,11 +47,31 @@ class Api::V1::ChatsController < ApplicationController
       
       # AIサービスを初期化（新しいバージョンを使用）
       ai_service = AiServiceV2.new(provider: provider, api_key: api_key)
-      
+
+      # 動的プロンプトとパラメータを生成（system_promptが指定されていない場合のみ）
+      dynamic_system_prompt = chat_params[:system_prompt]
+      dynamic_temperature = chat_params[:temperature]&.to_f
+
+      if chat_params[:system_prompt].blank?
+        # セッション全体のメッセージを取得（動的プロンプト生成用）
+        all_session_messages = current_user.chat_messages
+                                          .by_session(session_id)
+                                          .order(created_at: :asc)
+
+        prompt_service = DynamicPromptService.new(all_session_messages)
+        dynamic_system_prompt = prompt_service.generate_system_prompt
+
+        # temperatureも動的に調整（指定されていない場合）
+        dynamic_temperature ||= prompt_service.recommended_temperature
+      end
+
+      # デフォルト値の設定
+      dynamic_temperature ||= 0.7
+
       # メッセージを構築
       messages = ai_service.build_messages(
         past_messages[0...-1], # 最後のメッセージ（今回のユーザーメッセージ）を除く
-        chat_params[:system_prompt]
+        dynamic_system_prompt
       )
       
       # 今回のユーザーメッセージを追加
@@ -52,7 +87,7 @@ class Api::V1::ChatsController < ApplicationController
       ai_response = ai_service.chat(
         messages,
         model: chat_params[:model],
-        temperature: chat_params[:temperature]&.to_f,
+        temperature: dynamic_temperature,
         max_tokens: chat_params[:max_tokens]&.to_i
       )
       
@@ -107,18 +142,26 @@ class Api::V1::ChatsController < ApplicationController
                            .select(:session_id, 'MAX(created_at) as last_message_at', 'COUNT(*) as message_count')
                            .group(:session_id)
                            .order('last_message_at DESC')
-    
+
     render json: {
       sessions: sessions.map do |session|
+        # セッション内のメッセージから感情を集約
+        session_messages = current_user.chat_messages
+                                      .by_session(session.session_id)
+                                      .where(role: 'user')
+
+        # 全感情を集計
+        all_emotions = session_messages.pluck(:emotions).flatten.compact
+        emotion_summary = aggregate_emotions(all_emotions)
+
         {
           session_id: session.session_id,
           last_message_at: session.last_message_at,
           message_count: session.message_count,
           # 最初のメッセージを取得してプレビューとする
-          preview: current_user.chat_messages
-                                .by_session(session.session_id)
-                                .where(role: 'user')
-                                .first&.content&.truncate(100)
+          preview: session_messages.first&.content&.truncate(100),
+          # 感情情報を追加
+          emotions: emotion_summary
         }
       end
     }
@@ -150,8 +193,49 @@ class Api::V1::ChatsController < ApplicationController
       role: message.role,
       session_id: message.session_id,
       metadata: message.metadata,
+      emotions: message.emotions,
       created_at: message.created_at,
       updated_at: message.updated_at
     }
+  end
+
+  def aggregate_emotions(emotions)
+    return [] if emotions.empty?
+
+    # 感情の出現頻度と平均強度を計算
+    emotion_map = {}
+
+    emotions.each do |emotion|
+      next unless emotion.is_a?(Hash)
+
+      name = emotion['name'] || emotion[:name]
+      intensity = (emotion['intensity'] || emotion[:intensity] || 0).to_f
+      label = emotion['label'] || emotion[:label] || name
+
+      if emotion_map[name]
+        emotion_map[name][:count] += 1
+        emotion_map[name][:total_intensity] += intensity
+      else
+        emotion_map[name] = {
+          name: name,
+          label: label,
+          count: 1,
+          total_intensity: intensity
+        }
+      end
+    end
+
+    # 上位3つの感情を返す（頻度と強度でソート）
+    emotion_map.values
+              .map do |e|
+                {
+                  name: e[:name],
+                  label: e[:label],
+                  intensity: (e[:total_intensity] / e[:count]).round(2),
+                  frequency: e[:count]
+                }
+              end
+              .sort_by { |e| [-e[:frequency], -e[:intensity]] }
+              .first(3)
   end
 end
