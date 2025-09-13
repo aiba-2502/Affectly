@@ -1,11 +1,4 @@
 class DynamicPromptService
-  # 会話の段階を定義
-  CONVERSATION_STAGES = {
-    initial: (0..2),      # 初期段階：導入と理解
-    exploring: (3..5),    # 探索段階：深掘り
-    deepening: (6..8),    # 深化段階：整理と気づき
-    concluding: (9..)     # 終結段階：まとめ
-  }.freeze
 
   def initialize(session_messages = [])
     @session_messages = session_messages
@@ -35,25 +28,16 @@ class DynamicPromptService
   # 会話の段階に応じた適切な温度設定を返す
   def recommended_temperature
     stage = determine_conversation_stage
-
-    case stage
-    when :initial
-      0.6  # 初期は安定した応答
-    when :exploring
-      0.7  # 探索段階は少し創造的に
-    when :deepening
-      0.5  # 深化段階は整理重視で安定
-    when :concluding
-      0.4  # 終結段階は一貫性重視
-    else
-      0.6
-    end
+    DynamicPromptConfig.temperature_for_stage(stage)
   end
 
   private
 
   def determine_conversation_stage
-    CONVERSATION_STAGES.find { |_, range| range.include?(@message_count) }&.first || :concluding
+    DynamicPromptConfig::CONVERSATION_STAGES.each do |stage, config|
+      return stage if config[:range].include?(@message_count)
+    end
+    :concluding
   end
 
   def analyze_user_state
@@ -70,26 +54,13 @@ class DynamicPromptService
       closing: false
     }
 
-    # 満足のサイン
-    satisfaction_keywords = %w[
-      ありがとう スッキリ 分かった 理解 納得 そうか なるほど
-      助かった 嬉しい 良かった 安心 解決
-    ]
-
-    # 混乱のサイン
-    confusion_keywords = %w[
-      分からない 難しい 混乱 どうしたら 迷って 不安
-      よくわからない 複雑 整理できない
-    ]
-
-    # 会話終了のサイン
-    closing_keywords = %w[
-      じゃあ では それでは またね ばいばい 失礼
-      おやすみ ありがとうございました 終わり
-    ]
+    # キーワード設定を取得
+    satisfaction_keywords = DynamicPromptConfig.satisfaction_keywords
+    confusion_keywords = DynamicPromptConfig.confusion_keywords
+    closing_keywords = DynamicPromptConfig.closing_keywords
 
     # 短い返答（疲れや満足のサイン）
-    short_response = last_message.length < 10
+    short_response = last_message.length < DynamicPromptConfig::SHORT_RESPONSE_THRESHOLD
 
     state[:satisfied] = satisfaction_keywords.any? { |word| last_message.include?(word) }
     state[:confused] = confusion_keywords.any? { |word| last_message.include?(word) }
@@ -114,7 +85,7 @@ class DynamicPromptService
     common_words = words1 & words2
     similarity = common_words.length.to_f / [words1.length, words2.length].min
 
-    similarity > 0.6
+    similarity > DynamicPromptConfig::SIMILARITY_THRESHOLD
   end
 
   def generate_stage_specific_prompt(stage, user_state)
@@ -211,7 +182,7 @@ class DynamicPromptService
   end
 
   def concluding_stage_prompt(user_state)
-    if @message_count >= 10
+    if @message_count >= DynamicPromptConfig::MAX_CONVERSATION_TURNS
       # 10回以上の会話は強制的に終了へ
       <<~PROMPT
         【現在の対応方針】
