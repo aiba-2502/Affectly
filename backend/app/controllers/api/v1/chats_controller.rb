@@ -47,11 +47,31 @@ class Api::V1::ChatsController < ApplicationController
       
       # AIサービスを初期化（新しいバージョンを使用）
       ai_service = AiServiceV2.new(provider: provider, api_key: api_key)
-      
+
+      # 動的プロンプトとパラメータを生成（system_promptが指定されていない場合のみ）
+      dynamic_system_prompt = chat_params[:system_prompt]
+      dynamic_temperature = chat_params[:temperature]&.to_f
+
+      if chat_params[:system_prompt].blank?
+        # セッション全体のメッセージを取得（動的プロンプト生成用）
+        all_session_messages = current_user.chat_messages
+                                          .by_session(session_id)
+                                          .order(created_at: :asc)
+
+        prompt_service = DynamicPromptService.new(all_session_messages)
+        dynamic_system_prompt = prompt_service.generate_system_prompt
+
+        # temperatureも動的に調整（指定されていない場合）
+        dynamic_temperature ||= prompt_service.recommended_temperature
+      end
+
+      # デフォルト値の設定
+      dynamic_temperature ||= 0.7
+
       # メッセージを構築
       messages = ai_service.build_messages(
         past_messages[0...-1], # 最後のメッセージ（今回のユーザーメッセージ）を除く
-        chat_params[:system_prompt]
+        dynamic_system_prompt
       )
       
       # 今回のユーザーメッセージを追加
@@ -67,7 +87,7 @@ class Api::V1::ChatsController < ApplicationController
       ai_response = ai_service.chat(
         messages,
         model: chat_params[:model],
-        temperature: chat_params[:temperature]&.to_f,
+        temperature: dynamic_temperature,
         max_tokens: chat_params[:max_tokens]&.to_i
       )
       
