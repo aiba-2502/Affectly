@@ -105,6 +105,7 @@ export class LAppDelegate {
     }
   }
 
+
   /**
    * Resize canvas and re-initialize view.
    */

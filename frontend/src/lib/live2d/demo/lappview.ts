@@ -59,6 +59,9 @@ export class LAppView {
     this._viewMatrix.setScreenRect(left, right, bottom, top); // デバイスに対応する画面の範囲。 Xの左端、Xの右端、Yの下端、Yの上端
     this._viewMatrix.scale(LAppDefine.ViewScale, LAppDefine.ViewScale);
 
+    // モデルを上に移動して腰より下も表示
+    this._viewMatrix.translateY(-0.1);
+
     this._deviceToScreen.loadIdentity();
     if (width > height) {
       const screenW: number = Math.abs(right - left);
@@ -157,13 +160,13 @@ export class LAppView {
 
     // 非同期なのでコールバック関数を作成
     const initBackGroundTexture = (textureInfo: TextureInfo): void => {
-      const { x, y } = this._subdelegate.getCanvas();
+      const x = 0;
+      const y = 0;
 
       const fwidth = this._subdelegate.getCanvas().width;
       const fheight = this._subdelegate.getCanvas().height;
 
       this._back = new LAppSprite(
-        this._subdelegate,
         x,
         y,
         fwidth,
@@ -189,7 +192,6 @@ export class LAppView {
       const fheight = textureInfo.height;
 
       this._gear = new LAppSprite(
-        this._subdelegate,
         x,
         y,
         fwidth,
