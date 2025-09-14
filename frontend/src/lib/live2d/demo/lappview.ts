@@ -10,7 +10,6 @@ import { CubismViewMatrix } from '../framework/math/cubismviewmatrix';
 
 import * as LAppDefine from './lappdefine';
 import { LAppLive2DManager } from './lapplive2dmanager';
-import { LAppPal } from './lapppal';
 import { LAppSprite } from './lappsprite';
 import { LAppSubdelegate } from './lappsubdelegate';
 import { TextureInfo } from './lapptexturemanager';
@@ -215,6 +214,38 @@ export class LAppView {
   }
 
   /**
+   * マウスポインタが動いた時に呼ばれる。
+   *
+   * @param pointX スクリーンX座標
+   * @param pointY スクリーンY座標
+   */
+  public onMouseMoved(pointX: number, pointY: number): void {
+    if (!this._touchManager || !this._subdelegate) {
+      return;
+    }
+
+    const posX = pointX * window.devicePixelRatio;
+    const posY = pointY * window.devicePixelRatio;
+
+    const lapplive2dmanager = this._subdelegate.getLive2DManager();
+    if (!lapplive2dmanager) {
+      return;
+    }
+
+    const viewX: number = this.transformViewX(posX);
+    const viewY: number = this.transformViewY(posY);
+
+    // デバッグ: 変換後の値を確認
+    if (LAppDefine.DebugLogEnable) {
+      console.log(`Mouse moved: viewX=${viewX}, viewY=${viewY}`);
+    }
+
+    // マウスカーソルに向かって視線を向ける
+    // 目の動きを自然にするため値を調整
+    lapplive2dmanager.onDrag(viewX, viewY);
+  }
+
+  /**
    * タッチされた時に呼ばれる。
    *
    * @param pointX スクリーンX座標
@@ -261,39 +292,23 @@ export class LAppView {
   /**
    * タッチが終了したら呼ばれる。
    *
-   * @param pointX スクリーンX座標
-   * @param pointY スクリーンY座標
+   * @param _pointX スクリーンX座標（未使用）
+   * @param _pointY スクリーンY座標（未使用）
    */
-  public onTouchesEnded(pointX: number, pointY: number): void {
+  public onTouchesEnded(_pointX: number, _pointY: number): void {
     if (!this._touchManager || !this._subdelegate) {
       return;
     }
-
-    const posX = pointX * window.devicePixelRatio;
-    const posY = pointY * window.devicePixelRatio;
 
     const lapplive2dmanager = this._subdelegate.getLive2DManager();
     if (!lapplive2dmanager) {
       return;
     }
 
-    // タッチ終了
+    // タッチ終了時の視線リセット
     lapplive2dmanager.onDrag(0.0, 0.0);
 
-    // シングルタップ
-    const x: number = this.transformViewX(posX);
-    const y: number = this.transformViewY(posY);
-
-    if (LAppDefine.DebugTouchLogEnable) {
-      LAppPal.printMessage(`[APP]touchesEnded x: ${x} y: ${y}`);
-    }
-
-    lapplive2dmanager.onTap(x, y);
-
-    // 歯車にタップしたか
-    if (this._gear && this._gear.isHit(pointX, pointY)) {
-      lapplive2dmanager.nextScene();
-    }
+    // クリック動作は廃止（タップ処理と歯車クリックを削除）
   }
 
   /**

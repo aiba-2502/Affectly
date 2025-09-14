@@ -29,12 +29,49 @@ function Live2DSdkComponent() {
 
       // リサイズイベントリスナーを追加
       window.addEventListener('resize', resizeView);
+
+      // マウスムーブイベントリスナーを追加（キャラクターが視線追従するため）
+      const handleMouseMove = (e: MouseEvent) => {
+        if (delegateRef.current) {
+          // onMouseMoved メソッドを呼び出して視線追従を実現
+          (delegateRef.current as any).onMouseMoved(e);
+        }
+      };
+
+      // マウスが画面から離れた時の処理
+      const handleMouseLeave = () => {
+        if (delegateRef.current) {
+          // 視線を中央に戻す
+          const subdelegates = (delegateRef.current as any)._subdelegates;
+          if (subdelegates) {
+            for (let i = 0; i < subdelegates.getSize(); i++) {
+              const subdelegate = subdelegates.at(i);
+              if (subdelegate && subdelegate.getLive2DManager) {
+                const manager = subdelegate.getLive2DManager();
+                if (manager && manager.onMouseLeave) {
+                  manager.onMouseLeave();
+                }
+              }
+            }
+          }
+        }
+      };
+
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseleave', handleMouseLeave);
+
+      // クリーンアップ
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseleave', handleMouseLeave);
+        window.removeEventListener('resize', resizeView);
+        LAppDelegate.releaseInstance();
+      };
     }
 
-    // クリーンアップ
     return () => {
-      LAppDelegate.releaseInstance();
       window.removeEventListener('resize', resizeView);
+      LAppDelegate.releaseInstance();
     };
   }, [resizeView]);
 

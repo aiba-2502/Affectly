@@ -349,6 +349,9 @@ export class LAppModel extends CubismUserModel {
         new BreathParameterData(this._idParamBodyAngleX, 0.0, 4.0, 15.5345, 0.5)
       );
       breathParameters.pushBack(
+        new BreathParameterData(this._idParamBodyAngleY, 0.0, 2.0, 8.5345, 0.5)
+      );
+      breathParameters.pushBack(
         new BreathParameterData(
           CubismFramework.getIdManager().getId(
             CubismDefaultParameterId.ParamBreath
@@ -582,8 +585,13 @@ export class LAppModel extends CubismUserModel {
     this._userTimeSeconds += deltaTimeSeconds;
 
     this._dragManager.update(deltaTimeSeconds);
-    this._dragX = this._dragManager.getX();
-    this._dragY = this._dragManager.getY();
+    const targetDragX = this._dragManager.getX();
+    const targetDragY = this._dragManager.getY();
+
+    // スムージング処理（急激な動きを防止）
+    const smoothingFactor = 0.08; // 値が小さいほど滑らか（より滑らかに調整）
+    this._dragX += (targetDragX - this._dragX) * smoothingFactor;
+    this._dragY += (targetDragY - this._dragY) * smoothingFactor;
 
     // モーションによるパラメータ更新の有無
     let motionUpdated = false;
@@ -602,7 +610,7 @@ export class LAppModel extends CubismUserModel {
         deltaTimeSeconds
       ); // モーションを更新
     }
-    this._model.saveParameters(); // 状態を保存
+    // saveParametersは最後に移動して、全てのパラメータ更新後に保存
     //--------------------------------------------------------------------------
 
     // まばたき
@@ -618,23 +626,33 @@ export class LAppModel extends CubismUserModel {
     }
 
     // ドラッグによる変化
-    // ドラッグによる顔の向きの調整
-    this._model.addParameterValueById(this._idParamAngleX, this._dragX * 30); // -30から30の値を加える
-    this._model.addParameterValueById(this._idParamAngleY, this._dragY * 30);
-    this._model.addParameterValueById(
-      this._idParamAngleZ,
-      this._dragX * this._dragY * -30
-    );
+    // 待機モーション中でもマウス追従を優先するため、パラメータ値を強制的に上書き
+    // 顔の向きの調整（控えめで自然な動きに調整）
+    const baseAngleX = this._model.getParameterValueById(this._idParamAngleX);
+    const baseAngleY = this._model.getParameterValueById(this._idParamAngleY);
+    const baseAngleZ = this._model.getParameterValueById(this._idParamAngleZ);
+    const baseBodyAngleX = this._model.getParameterValueById(this._idParamBodyAngleX);
+    const baseBodyAngleY = this._model.getParameterValueById(this._idParamBodyAngleY);
+    const baseBodyAngleZ = this._model.getParameterValueById(this._idParamBodyAngleZ);
 
-    // ドラッグによる体の向きの調整
-    this._model.addParameterValueById(
-      this._idParamBodyAngleX,
-      this._dragX * 10
-    ); // -10から10の値を加える
+    // モーションの値に追従値を加算（待機モーションの動きを残しつつ追従を有効化）
+    this._model.setParameterValueById(this._idParamAngleX, baseAngleX + this._dragX * 18);
+    this._model.setParameterValueById(this._idParamAngleY, baseAngleY + this._dragY * 18);
+    this._model.setParameterValueById(this._idParamAngleZ, baseAngleZ + this._dragX * this._dragY * -8);
 
-    // ドラッグによる目の向きの調整
-    this._model.addParameterValueById(this._idParamEyeBallX, this._dragX); // -1から1の値を加える
-    this._model.addParameterValueById(this._idParamEyeBallY, this._dragY);
+    // 体の向きの調整
+    this._model.setParameterValueById(this._idParamBodyAngleX, baseBodyAngleX + this._dragX * 6);
+    this._model.setParameterValueById(this._idParamBodyAngleY, baseBodyAngleY + this._dragY * 6);
+    this._model.setParameterValueById(this._idParamBodyAngleZ, baseBodyAngleZ + this._dragX * this._dragY * -3);
+
+    // 目の向きの調整（自然な視線移動）
+    if (LAppDefine.DebugLogEnable && (this._dragX !== 0 || this._dragY !== 0)) {
+      console.log(`Tracking: dragX=${this._dragX}, dragY=${this._dragY}`);
+    }
+    const baseEyeBallX = this._model.getParameterValueById(this._idParamEyeBallX);
+    const baseEyeBallY = this._model.getParameterValueById(this._idParamEyeBallY);
+    this._model.setParameterValueById(this._idParamEyeBallX, baseEyeBallX + this._dragX);
+    this._model.setParameterValueById(this._idParamEyeBallY, baseEyeBallY + this._dragY);
 
     // 呼吸など
     if (this._breath != null) {
@@ -663,7 +681,43 @@ export class LAppModel extends CubismUserModel {
       this._pose.updateParameters(this._model, deltaTimeSeconds);
     }
 
+    // 全てのパラメータ更新が完了してから状態を保存
+    this._model.saveParameters();
+
     this._model.update();
+  }
+
+  /**
+   * マウス位置を設定する（ドラッグではなく単純な位置追従）
+   * @param x X座標
+   * @param y Y座標
+   */
+  public setMousePosition(x: number, y: number): void {
+    // ドラッグマネージャーに直接座標を設定
+    this._dragManager.set(x, y);
+    // デバッグ: 設定される値を確認
+    if (LAppDefine.DebugLogEnable) {
+      console.log(`setMousePosition: x=${x}, y=${y}`);
+    }
+  }
+
+  /**
+   * マウスが画面外に出た時の処理
+   */
+  public resetMousePosition(): void {
+    this._dragManager.set(0, 0);
+    if (LAppDefine.DebugLogEnable) {
+      console.log('Mouse position reset to center');
+    }
+  }
+
+  /**
+   * ドラッグ情報を設定する（旧メソッド、互換性のため残す）
+   * @param x X座標
+   * @param y Y座標
+   */
+  public setDragging(x: number, y: number): void {
+    this.setMousePosition(x, y);
   }
 
   /**
@@ -735,6 +789,11 @@ export class LAppModel extends CubismUserModel {
     } else {
       motion.setBeganMotionHandler(onBeganMotionHandler);
       motion.setFinishedMotionHandler(onFinishedMotionHandler);
+    }
+
+    // 待機モーションの場合、ウェイトを大幅に下げてマウス追従の影響を強くする
+    if (group === LAppDefine.MotionGroupIdle) {
+      motion.setWeight(0.3); // 待機モーションの影響を30%に減らす（マウス追従を優先）
     }
 
     //voice
@@ -1102,6 +1161,12 @@ export class LAppModel extends CubismUserModel {
     this._idParamBodyAngleX = CubismFramework.getIdManager().getId(
       CubismDefaultParameterId.ParamBodyAngleX
     );
+    this._idParamBodyAngleY = CubismFramework.getIdManager().getId(
+      CubismDefaultParameterId.ParamBodyAngleY
+    );
+    this._idParamBodyAngleZ = CubismFramework.getIdManager().getId(
+      CubismDefaultParameterId.ParamBodyAngleZ
+    );
 
     if (LAppDefine.MOCConsistencyValidationEnable) {
       this._mocConsistency = true;
@@ -1142,6 +1207,8 @@ export class LAppModel extends CubismUserModel {
   _idParamEyeBallX: CubismIdHandle; // パラメータID: ParamEyeBallX
   _idParamEyeBallY: CubismIdHandle; // パラメータID: ParamEyeBAllY
   _idParamBodyAngleX: CubismIdHandle; // パラメータID: ParamBodyAngleX
+  _idParamBodyAngleY: CubismIdHandle; // パラメータID: ParamBodyAngleY
+  _idParamBodyAngleZ: CubismIdHandle; // パラメータID: ParamBodyAngleZ
 
   _state: LoadStep; // 現在のステータス管理用
   _expressionCount: number; // 表情データカウント

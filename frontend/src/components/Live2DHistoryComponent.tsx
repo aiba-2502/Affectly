@@ -5,8 +5,8 @@ import type { Application, DisplayObject } from 'pixi.js';
 
 // 履歴画面専用のLive2D設定
 const LIVE2D_CONFIG = {
-  scale: 0.22,           // 少し引いて表示
-  horizontalOffset: -10, // 中央寄りに調整
+  scale: 0.15,           // より小さく表示して枠内に収める
+  horizontalOffset: 0,   // 中央に配置
   verticalOffset: 0,     // 垂直方向のオフセット
 };
 
@@ -189,10 +189,35 @@ const Live2DHistoryComponent = () => {
       model.y = app.renderer.height / 2 + LIVE2D_CONFIG.verticalOffset;
     };
 
+    // マウス追従機能を追加
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!model || !containerRef.current) return;
+
+      const rect = containerRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      // マウス位置を正規化（-1 から 1 の範囲）
+      const normalizedX = (mouseX / rect.width) * 2 - 1;
+      const normalizedY = (mouseY / rect.height) * 2 - 1;
+
+      // Live2Dモデルの視線を更新（tapメソッドを使用）
+      if (model.tap) {
+        model.tap(e.clientX, e.clientY);
+      }
+
+      // モデルの向きを調整（focusメソッドがある場合）
+      if (model.focus) {
+        model.focus(normalizedX, -normalizedY);
+      }
+    };
+
     window.addEventListener('resize', onResize);
+    window.addEventListener('mousemove', handleMouseMove);
 
     return () => {
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('mousemove', handleMouseMove);
     };
   }, [app, model]);
 

@@ -61,6 +61,21 @@ export class LAppDelegate {
   }
 
   /**
+   * マウスが動いたら呼ばれる。
+   */
+  public onMouseMoved(e: MouseEvent): void {
+    if (!this._subdelegates) return;
+
+    for (
+      let ite = this._subdelegates.begin();
+      ite.notEqual(this._subdelegates.end());
+      ite.preIncrement()
+    ) {
+      ite.ptr().onMouseMove(e.pageX, e.pageY);
+    }
+  }
+
+  /**
    * ポインタが動いたら呼ばれる。
    */
   private onPointerMoved(e: PointerEvent): void {
@@ -257,35 +272,14 @@ export class LAppDelegate {
    */
   private initializeEventListener(): void {
     // 既にイベントリスナーが設定されている場合は削除
-    if (this.pointBeganEventListener) {
-      document.removeEventListener('pointerdown', this.pointBeganEventListener);
-    }
-    if (this.pointMovedEventListener) {
-      document.removeEventListener('pointermove', this.pointMovedEventListener);
-    }
-    if (this.pointEndedEventListener) {
-      document.removeEventListener('pointerup', this.pointEndedEventListener);
-    }
-    if (this.pointCancelEventListener) {
-      document.removeEventListener('pointercancel', this.pointCancelEventListener);
+    if (this.mouseMovedEventListener) {
+      document.removeEventListener('mousemove', this.mouseMovedEventListener);
     }
 
-    this.pointBeganEventListener = this.onPointerBegan.bind(this);
-    this.pointMovedEventListener = this.onPointerMoved.bind(this);
-    this.pointEndedEventListener = this.onPointerEnded.bind(this);
-    this.pointCancelEventListener = this.onPointerCancel.bind(this);
+    this.mouseMovedEventListener = this.onMouseMoved.bind(this);
 
-    // ポインタ関連コールバック関数登録
-    document.addEventListener('pointerdown', this.pointBeganEventListener, {
-      passive: true
-    });
-    document.addEventListener('pointermove', this.pointMovedEventListener, {
-      passive: true
-    });
-    document.addEventListener('pointerup', this.pointEndedEventListener, {
-      passive: true
-    });
-    document.addEventListener('pointercancel', this.pointCancelEventListener, {
+    // マウスムーブイベントリスナーのみを追加（クリック動作は削除）
+    document.addEventListener('mousemove', this.mouseMovedEventListener, {
       passive: true
     });
   }
@@ -407,6 +401,10 @@ export class LAppDelegate {
    * リスナー関数
    */
   private pointCancelEventListener: (this: Document, ev: PointerEvent) => void;
+  /**
+   * マウスムーブイベントリスナー関数
+   */
+  private mouseMovedEventListener: (this: Document, ev: MouseEvent) => void;
 
   /**
    * 実行処理。

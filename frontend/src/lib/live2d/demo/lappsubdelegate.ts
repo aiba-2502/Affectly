@@ -259,6 +259,22 @@ export class LAppSubdelegate {
   /**
    * マウスダウン、タッチダウンしたときに呼ばれる。
    */
+  /**
+   * マウスムーブイベント
+   * @param pageX マウスの位置のページX座標
+   * @param pageY マウスの位置のページY座標
+   */
+  public onMouseMove(pageX: number, pageY: number): void {
+    if (!this._view) {
+      return;
+    }
+
+    const localX: number = pageX - this._canvas.offsetLeft;
+    const localY: number = pageY - this._canvas.offsetTop;
+
+    this._view.onMouseMoved(localX, localY);
+  }
+
   public onPointBegan(pageX: number, pageY: number): void {
     if (!this._view) {
       LAppPal.printMessage('view notfound');

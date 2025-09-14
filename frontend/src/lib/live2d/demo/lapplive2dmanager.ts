@@ -55,36 +55,25 @@ export class LAppLive2DManager {
   }
 
   /**
-   * 画面をタップした時の処理
+   * マウスが画面外に出た時の処理
+   */
+  public onMouseLeave(): void {
+    const model: LAppModel = this._models.at(0);
+    if (model) {
+      model.resetMousePosition();
+    }
+  }
+
+  /**
+   * 画面をタップした時の処理（廃止）
+   * マウスクリック動作は使用しない
    *
    * @param x 画面のX座標
    * @param y 画面のY座標
    */
   public onTap(x: number, y: number): void {
-    if (LAppDefine.DebugLogEnable) {
-      LAppPal.printMessage(
-        `[APP]tap point: {x: ${x.toFixed(2)} y: ${y.toFixed(2)}}`
-      );
-    }
-
-    const model: LAppModel = this._models.at(0);
-
-    if (model.hitTest(LAppDefine.HitAreaNameHead, x, y)) {
-      if (LAppDefine.DebugLogEnable) {
-        LAppPal.printMessage(`[APP]hit area: [${LAppDefine.HitAreaNameHead}]`);
-      }
-      model.setRandomExpression();
-    } else if (model.hitTest(LAppDefine.HitAreaNameBody, x, y)) {
-      if (LAppDefine.DebugLogEnable) {
-        LAppPal.printMessage(`[APP]hit area: [${LAppDefine.HitAreaNameBody}]`);
-      }
-      model.startRandomMotion(
-        LAppDefine.MotionGroupTapBody,
-        LAppDefine.PriorityNormal,
-        this.finishedMotion,
-        this.beganMotion
-      );
-    }
+    // クリック動作は廃止
+    return;
   }
 
   /**
@@ -157,6 +146,11 @@ export class LAppLive2DManager {
     instance.setSubdelegate(this._subdelegate);
     instance.loadAssets(modelPath, modelJsonName);
     this._models.pushBack(instance);
+
+    // モデル読み込み完了後にアイドルモーションを開始
+    setTimeout(() => {
+      this.startIdleMotion();
+    }, 1000);
   }
 
   public setViewMatrix(m: CubismMatrix44) {
@@ -199,6 +193,24 @@ export class LAppLive2DManager {
   public initialize(subdelegate: LAppSubdelegate): void {
     this._subdelegate = subdelegate;
     this.changeScene(this._sceneIndex);
+  }
+
+  /**
+   * モデル読み込み後にアイドルモーションを開始
+   */
+  public startIdleMotion(): void {
+    const model: LAppModel = this._models.at(0);
+    if (model) {
+      // アイドルモーションをループ再生
+      model.startRandomMotion(
+        LAppDefine.MotionGroupIdle,
+        LAppDefine.PriorityIdle,
+        () => {
+          // モーション終了後、次のアイドルモーションを再生
+          this.startIdleMotion();
+        }
+      );
+    }
   }
 
   /**
