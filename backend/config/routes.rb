@@ -30,6 +30,9 @@ Rails.application.routes.draw do
           get 'sessions'
         end
       end
+
+      # Voice routes
+      post 'voices/generate', to: 'voices#generate'
     end
   end
 end
