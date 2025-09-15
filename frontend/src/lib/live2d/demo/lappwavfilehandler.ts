@@ -104,6 +104,21 @@ export class LAppWavFileHandler {
   public loadWavFile(filePath: string): Promise<boolean> {
     return new Promise(resolveValue => {
       let ret = false;
+      let resolved = false;  // resolveValueが呼ばれたかどうかのフラグ
+
+      const safeResolve = (value: boolean) => {
+        if (!resolved) {
+          resolved = true;
+          resolveValue(value);
+        }
+      };
+
+      console.log('LAppWavFileHandler: loadWavFile開始', {
+        url: filePath.substring(0, 100),
+        isDataUrl: filePath.startsWith('data:'),
+        isBase64: filePath.includes('base64'),
+        protocol: filePath.substring(0, 10)
+      });
 
       if (this._pcmData != null) {
         this.releasePcmData();
@@ -111,25 +126,92 @@ export class LAppWavFileHandler {
 
       // ファイルロード
       const asyncFileLoad = async () => {
-        return fetch(filePath).then(responce => {
-          return responce.arrayBuffer();
+        // Base64データURLの場合の処理（使用しないが残しておく）
+        if (filePath.startsWith('data:audio/wav;base64,') || filePath.startsWith('data:audio/x-wav;base64,')) {
+          try {
+            console.log('LAppWavFileHandler: Base64データURLをデコード中');
+            // Base64部分を抽出
+            const base64Data = filePath.split(',')[1];
+            // Base64をバイナリ文字列に変換
+            const binaryString = atob(base64Data);
+            // バイナリ文字列をArrayBufferに変換
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            console.log('LAppWavFileHandler: Base64デコード成功', {
+              size: bytes.buffer.byteLength
+            });
+            return bytes.buffer;
+          } catch (error) {
+            console.error('Base64デコードエラー:', error);
+            throw error;
+          }
+        }
+
+        // Blob URLまたは通常のURLの場合はfetchを使用
+        if (filePath.startsWith('blob:')) {
+          console.log('LAppWavFileHandler: Blob URLをfetch:', filePath);
+        } else {
+          console.log('LAppWavFileHandler: 通常のURLをfetch:', filePath);
+        }
+
+        return fetch(filePath).then(response => {
+          console.log('LAppWavFileHandler: fetchレスポンス:', {
+            status: response.status,
+            ok: response.ok,
+            type: response.type,
+            url: response.url.substring(0, 50)
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.arrayBuffer();
+        }).then(arrayBuffer => {
+          console.log('LAppWavFileHandler: ArrayBuffer取得成功', {
+            size: arrayBuffer.byteLength
+          });
+          return arrayBuffer;
+        }).catch(error => {
+          console.error('LAppWavFileHandler: fetch失敗:', error);
+          throw error;
         });
       };
 
-      const asyncWavFileManager = (async () => {
-        this._byteReader._fileByte = await asyncFileLoad();
-        this._byteReader._fileDataView = new DataView(
-          this._byteReader._fileByte
-        );
-        this._byteReader._fileSize = this._byteReader._fileByte.byteLength;
-        this._byteReader._readOffset = 0;
+      (async () => {
+        try {
+          console.log('LAppWavFileHandler: asyncFileLoad開始');
+          this._byteReader._fileByte = await asyncFileLoad();
+          console.log('LAppWavFileHandler: asyncFileLoad成功', {
+            byteLength: this._byteReader._fileByte.byteLength,
+            firstBytes: new Uint8Array(this._byteReader._fileByte.slice(0, 4))
+          });
+
+          this._byteReader._fileDataView = new DataView(
+            this._byteReader._fileByte
+          );
+          this._byteReader._fileSize = this._byteReader._fileByte.byteLength;
+          this._byteReader._readOffset = 0;
+        } catch (error) {
+          console.error('WAVファイル読み込みエラー:', error);
+          console.error('エラー詳細:', {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+          });
+          safeResolve(false);
+          return;
+        }
 
         // ファイルロードに失敗しているか、先頭のシグネチャ"RIFF"を入れるサイズもない場合は失敗
         if (
           this._byteReader._fileByte == null ||
           this._byteReader._fileSize < 4
         ) {
-          resolveValue(false);
+          console.error('LAppWavFileHandler: ファイルサイズ不正', {
+            fileSize: this._byteReader._fileSize,
+            fileByte: this._byteReader._fileByte
+          });
+          safeResolve(false);
           return;
         }
 
@@ -139,6 +221,19 @@ export class LAppWavFileHandler {
         try {
           // シグネチャ "RIFF"
           if (!this._byteReader.getCheckSignature('RIFF')) {
+            console.error('LAppWavFileHandler: RIFFシグネチャが見つかりません');
+            console.log('先頭4バイト:', {
+              byte0: this._byteReader._fileByte[0],
+              byte1: this._byteReader._fileByte[1],
+              byte2: this._byteReader._fileByte[2],
+              byte3: this._byteReader._fileByte[3],
+              asString: String.fromCharCode(
+                this._byteReader._fileByte[0],
+                this._byteReader._fileByte[1],
+                this._byteReader._fileByte[2],
+                this._byteReader._fileByte[3]
+              )
+            });
             ret = false;
             throw new Error('Cannot find Signeture "RIFF".');
           }
@@ -227,18 +322,23 @@ export class LAppWavFileHandler {
 
           ret = true;
 
-          resolveValue(ret);
+          console.log('LAppWavFileHandler: WAVファイルロード成功、ret=', ret);
+          safeResolve(ret);
         } catch (e) {
-          console.log(e);
+          console.error('LAppWavFileHandler: WAVファイル解析エラー:', e);
+          ret = false;
+          safeResolve(ret);
         }
       })().then(() => {
-        resolveValue(ret);
+        // Portfolio-frontと同じように、retをresolveする
+        console.log('LAppWavFileHandler: loadWavFile最終完了、ret=', ret);
+        safeResolve(ret);
       });
     });
   }
 
   public getPcmSample(): number {
-    let pcm32;
+    let pcm32: number;
 
     // 32ビット幅に拡張してから-1～1の範囲に丸める
     switch (this._wavFileInfo._bitsPerSample) {

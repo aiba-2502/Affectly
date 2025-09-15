@@ -1,5 +1,6 @@
 require "net/http"
 require "json"
+require "base64"
 
 module Api
   module V1
@@ -34,7 +35,8 @@ module Api
           raise "にじボイスAPIの設定が不完全です"
         end
 
-        uri = URI("https://api.nijivoice.com/api/platform/v1/voice-actors/#{voice_id}/generate-voice")
+        # generate-encoded-voiceエンドポイントを使用してBase64データを直接取得
+        uri = URI("https://api.nijivoice.com/api/platform/v1/voice-actors/#{voice_id}/generate-encoded-voice")
 
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = true
@@ -60,18 +62,37 @@ module Api
         case response.code.to_i
         when 200
           data = JSON.parse(response.body)
+          Rails.logger.info "NijiVoice API Response keys: #{data.keys.inspect}"
 
-          # レスポンスから音声URLまたはBase64データを取得
-          audio_url = data.dig("generatedVoice", "audioFileUrl") ||
-                     data.dig("generatedVoice", "audioFileDownloadUrl")
-          audio_data = data["audioData"]
+          # generate-encoded-voiceのレスポンスからBase64音声データを取得
+          base64_audio = data.dig("generatedVoice", "base64Audio")
 
-          if audio_url
-            { audioUrl: audio_url }
-          elsif audio_data
-            { audioData: audio_data }
+          if base64_audio
+            # Base64データを返す
+            { audioData: base64_audio }
           else
-            raise "音声データが取得できませんでした"
+            # フォールバック: 旧形式のレスポンスもサポート
+            audio_url = data.dig("generatedVoice", "audioFileUrl") ||
+                       data.dig("generatedVoice", "audioFileDownloadUrl")
+
+            if audio_url
+              # 外部URLから音声データを取得してBase64に変換
+              begin
+                audio_response = Net::HTTP.get_response(URI(audio_url))
+                if audio_response.code.to_i == 200
+                  base64_data = Base64.strict_encode64(audio_response.body)
+                  { audioData: base64_data }
+                else
+                  Rails.logger.error "Failed to fetch audio from URL: #{audio_url}, Status: #{audio_response.code}"
+                  raise "音声データの取得に失敗しました"
+                end
+              rescue => e
+                Rails.logger.error "Error fetching audio from URL: #{e.message}"
+                raise "音声データの取得に失敗しました"
+              end
+            else
+              raise "音声データが取得できませんでした"
+            end
           end
         when 401
           raise "APIキーが無効です"

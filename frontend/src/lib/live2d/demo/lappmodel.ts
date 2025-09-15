@@ -668,11 +668,19 @@ export class LAppModel extends CubismUserModel {
     if (this._lipsync) {
       let value = 0.0; // リアルタイムでリップシンクを行う場合、システムから音量を取得して、0~1の範囲で値を入力します。
 
-      this._wavFileHandler.update(deltaTimeSeconds);
-      value = this._wavFileHandler.getRms();
+      // 外部から設定された値を優先
+      if (this._lipSyncValue > 0) {
+        value = this._lipSyncValue;
+      } else {
+        // 従来のWAVファイルハンドラーを使用
+        this._wavFileHandler.update(deltaTimeSeconds);
+        value = this._wavFileHandler.getRms();
+      }
 
       for (let i = 0; i < this._lipSyncIds.getSize(); ++i) {
-        this._model.addParameterValueById(this._lipSyncIds.at(i), value, 0.8);
+        // setParameterValueByIdを使用して直接値を設定（addは相対的な加算）
+        // 第3引数（weight）を1.0にして値をそのまま適用
+        this._model.setParameterValueById(this._lipSyncIds.at(i), value, 1.0);
       }
     }
 
@@ -709,6 +717,14 @@ export class LAppModel extends CubismUserModel {
     if (LAppDefine.DebugLogEnable) {
       console.log('Mouse position reset to center');
     }
+  }
+
+  /**
+   * リップシンク値を設定する
+   * @param value リップシンク値（0.0〜1.0）
+   */
+  public setLipSyncValue(value: number): void {
+    this._lipSyncValue = value;
   }
 
   /**
@@ -1217,4 +1233,5 @@ export class LAppModel extends CubismUserModel {
   _allMotionCount: number; // モーション総数
   _wavFileHandler: LAppWavFileHandler; //wavファイルハンドラ
   _consistency: boolean; // MOC3整合性チェック管理用
+  private _lipSyncValue: number = 0.0; // リップシンク値（外部から設定可能）
 }

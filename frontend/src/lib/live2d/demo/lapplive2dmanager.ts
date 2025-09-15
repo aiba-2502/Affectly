@@ -214,6 +214,18 @@ export class LAppLive2DManager {
   }
 
   /**
+   * 指定されたインデックスのモデルを取得
+   * @param index モデルのインデックス（デフォルト: 0）
+   * @returns LAppModelのインスタンス（存在しない場合はnull）
+   */
+  public getModel(index: number = 0): LAppModel | null {
+    if (index < 0 || index >= this._models.getSize()) {
+      return null;
+    }
+    return this._models.at(index);
+  }
+
+  /**
    * 自身が所属するSubdelegate
    */
   private _subdelegate: LAppSubdelegate;

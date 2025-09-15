@@ -5,6 +5,7 @@ import { ChatMessage as ChatMessageType } from '@/types/chat';
 import { UserCircleIcon, SpeakerWaveIcon, StopIcon } from '@heroicons/react/24/solid';
 import DOMPurify from 'dompurify';
 import { VoiceService } from '@/services/voiceApi';
+import { useLipSyncHandler } from '@/lib/hooks/useLipSyncHandler';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -14,6 +15,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const isUser = message.role === 'user';
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { startLipSync, stopLipSync } = useLipSyncHandler();
 
   // XSS対策：メッセージ内容をサニタイズ
   const sanitizedContent = useMemo(() => {
@@ -35,6 +37,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
     if (isPlaying) {
       // 再生中の場合は停止
       VoiceService.stopVoice();
+      stopLipSync();  // リップシンクも停止
       setIsPlaying(false);
     } else {
       // 再生開始
@@ -43,13 +46,21 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         await VoiceService.playVoice(sanitizedContent, {
           onEnded: () => {
             // 音声再生終了時のコールバック
+            stopLipSync();  // リップシンクを停止
             setIsPlaying(false);
           },
           onError: (error) => {
             // エラー時のコールバック
             console.error('音声再生エラー:', error);
+            stopLipSync();  // リップシンクを停止
             setIsPlaying(false);
             alert('音声再生に失敗しました');
+          },
+          onLipSyncReady: (audioUrl) => {
+            // リップシンクを開始
+            startLipSync(audioUrl).catch(error => {
+              console.error('リップシンク開始エラー:', error);
+            });
           }
         });
         setIsPlaying(true);
