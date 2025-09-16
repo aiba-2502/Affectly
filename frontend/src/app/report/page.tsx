@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import BottomNav from '@/components/BottomNav';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { UserReport } from '@/types/report';
 import reportService from '@/services/reportService';
 import dynamic from 'next/dynamic';
@@ -58,6 +59,7 @@ export default function ReportPage() {
   const fetchReportData = async () => {
     try {
       setIsLoadingData(true);
+      console.log('AI分析を開始します...');
 
       // トークンをセット
       const token = localStorage.getItem('token');
@@ -65,8 +67,13 @@ export default function ReportPage() {
         reportService.setToken(token);
       }
 
-      // APIからレポートデータを取得
+      // APIからレポートデータを取得（AI分析実行）
+      console.log('AIがあなたの会話履歴を分析中です...');
+      const startTime = Date.now();
       const data = await reportService.getReport();
+      const endTime = Date.now();
+      console.log(`AI分析が完了しました（${(endTime - startTime) / 1000}秒）`);
+
       setReportData(data);
     } catch (error) {
       console.error('レポートデータの取得に失敗しました:', error);
@@ -134,10 +141,7 @@ export default function ReportPage() {
                   </h3>
                   <div className="space-y-3">
                     {isLoadingData ? (
-                      <div className="animate-pulse">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
-                        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                      </div>
+                      <LoadingSpinner message="あなたの強みをAI分析中です" />
                     ) : reportData && reportData.strengths && reportData.strengths.length > 0 ? (
                       reportData.strengths.slice(0, 2).map((strength) => (
                         <div key={strength.id} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
@@ -157,10 +161,7 @@ export default function ReportPage() {
                   </h3>
                   <div className="space-y-3">
                     {isLoadingData ? (
-                      <div className="animate-pulse">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
-                        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                      </div>
+                      <LoadingSpinner message="思考パターンをAI分析中です" />
                     ) : reportData && reportData.thinkingPatterns && reportData.thinkingPatterns.length > 0 ? (
                       reportData.thinkingPatterns.slice(0, 2).map((pattern) => (
                         <div key={pattern.id} className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3 border border-green-100">
@@ -180,10 +181,7 @@ export default function ReportPage() {
                   </h3>
                   <div className="space-y-3">
                     {isLoadingData ? (
-                      <div className="animate-pulse">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
-                        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                      </div>
+                      <LoadingSpinner message="価値観をAI分析中です" />
                     ) : reportData && reportData.values && reportData.values.length > 0 ? (
                       reportData.values.slice(0, 2).map((value) => (
                         <div key={value.id} className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 border border-purple-100">
@@ -233,11 +231,7 @@ export default function ReportPage() {
                     {activeTab === 'week' ? '今週' : '今月'}の会話サマリー
                   </h3>
                   {isLoadingData ? (
-                    <div className="animate-pulse">
-                      <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-5/6 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-4/6"></div>
-                    </div>
+                    <LoadingSpinner message="会話履歴をAI分析中です" />
                   ) : currentReport?.summary && currentReport.summary !== "この期間の会話履歴はありません。" ? (
                     <p className="text-gray-700 leading-relaxed">
                       {currentReport.summary}
@@ -256,11 +250,7 @@ export default function ReportPage() {
                     頻出キーワード
                   </h3>
                   {isLoadingData ? (
-                    <div className="animate-pulse flex flex-wrap gap-2">
-                      <div className="h-8 bg-gray-200 rounded-full w-20"></div>
-                      <div className="h-8 bg-gray-200 rounded-full w-24"></div>
-                      <div className="h-8 bg-gray-200 rounded-full w-16"></div>
-                    </div>
+                    <LoadingSpinner message="キーワードを抽出中です" />
                   ) : currentReport?.frequentKeywords && currentReport.frequentKeywords.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {currentReport.frequentKeywords.map((item) => (
@@ -284,11 +274,7 @@ export default function ReportPage() {
                     感情とキーワードの相関
                   </h3>
                   {isLoadingData ? (
-                    <div className="animate-pulse space-y-2">
-                      <div className="h-6 bg-gray-200 rounded w-full"></div>
-                      <div className="h-6 bg-gray-200 rounded w-5/6"></div>
-                      <div className="h-6 bg-gray-200 rounded w-4/6"></div>
-                    </div>
+                    <LoadingSpinner message="感情分析中です" />
                   ) : currentReport?.emotionKeywords && currentReport.emotionKeywords.length > 0 ? (
                     <div className="space-y-3">
                       {currentReport.emotionKeywords.map((item) => (
