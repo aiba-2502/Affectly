@@ -9,8 +9,8 @@ import dynamic from 'next/dynamic';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { useChatStore } from '@/stores/chatStore';
 
-// Live2Dコンポーネントを動的インポート（SSR無効化）- 履歴画面専用
-const Live2DHistoryComponent = dynamic(() => import('@/components/Live2DHistoryComponent'), {
+// Live2Dコンポーネントを動的インポート（SSR無効化）- コンテナ内表示版
+const Live2DContainedComponent = dynamic(() => import('@/components/Live2DContainedComponent'), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-full">
@@ -83,21 +83,22 @@ export default function HistoryPage() {
       {/* Main Content - 左右分割レイアウト */}
       <div className="flex-1 flex relative overflow-hidden">
         {/* Left Side - Live2D Character エリア - 拡大版 */}
-        <div className="w-80 lg:w-96 xl:w-[28rem] bg-gradient-to-br from-purple-50 to-pink-50 border-r border-gray-200 flex-shrink-0 relative">
-          <div className="absolute inset-4">
-            {showLive2D ? (
-              <Live2DHistoryComponent />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-gray-400 text-center">
-                  <div className="animate-pulse">
-                    <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-2"></div>
-                    <p className="text-xs">キャラクターを読み込み中...</p>
-                  </div>
+        <div className="w-80 lg:w-96 xl:w-[28rem] bg-gradient-to-br from-purple-50 to-pink-50 border-r border-gray-200 flex-shrink-0 relative overflow-hidden">
+          {/* Live2Dコンポーネントを配置 - コンテナ全域を表示領域として使用 */}
+          {showLive2D ? (
+            <div className="absolute inset-0">
+              <Live2DContainedComponent screenType="history" />
+            </div>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-gray-400 text-center">
+                <div className="animate-pulse">
+                  <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-2"></div>
+                  <p className="text-xs">キャラクターを読み込み中...</p>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Right Side - History List */}
