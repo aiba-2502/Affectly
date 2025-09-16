@@ -47,8 +47,8 @@ export const ChatContainer: React.FC = () => {
       }, 500);
       // メッセージ読み込み（エラーハンドリング改善）
       loadMessages().catch((error) => {
-        // 401エラー以外はコンソールにログ出力
-        if (error?.response?.status !== 401) {
+        // 401と404エラー以外はコンソールにログ出力
+        if (error?.response?.status !== 401 && error?.response?.status !== 404) {
           console.error('Failed to load messages:', error);
         }
         // 新規セッションの可能性があるため、エラーは表示しない
@@ -65,7 +65,7 @@ export const ChatContainer: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const loadMessages = async () => {
+  const loadMessages = async (retryCount = 0) => {
     try {
       const response = await chatApi.getMessages(sessionId);
       setMessages(response.messages);
@@ -74,6 +74,16 @@ export const ChatContainer: React.FC = () => {
       if (error?.response?.status === 401) {
         console.log('Authentication error - messages will be loaded after login');
         // メッセージをクリア
+        setMessages([]);
+      } else if (error?.response?.status === 404 && retryCount < 2) {
+        // 404エラーの場合、サーバーの起動を待ってリトライ
+        console.log(`Server may be starting up. Retrying... (attempt ${retryCount + 1})`);
+        setTimeout(() => {
+          loadMessages(retryCount + 1);
+        }, 1000);
+      } else if (error?.response?.status === 404) {
+        // リトライ後も404の場合は、新規セッションとして扱う
+        console.log('No messages found for this session - starting fresh');
         setMessages([]);
       } else {
         console.error('Failed to load messages:', error);
@@ -130,8 +140,8 @@ export const ChatContainer: React.FC = () => {
 
   return (
     <>
-      {/* Live2D Character - 背景として表示 */}
-      {showLive2D && <Live2DComponent />}
+      {/* Live2D Character - 背景として表示（チャット画面用モデル） */}
+      {showLive2D && <Live2DComponent screenType="chat" />}
       
       {/* チャット画面 - ChatGPT風 */}
       <div className="flex flex-col h-full relative z-10">

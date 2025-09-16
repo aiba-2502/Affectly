@@ -1,197 +1,97 @@
 'use client';
 
+import { LAppDelegate } from '@/lib/live2d/demo/lappdelegate';
+import { ScreenType } from '@/lib/live2d/demo/lappmodel';
 import { useEffect, useRef, useState } from 'react';
-import type { Application, DisplayObject } from 'pixi.js';
+import { usePathname } from 'next/navigation';
 
-// Live2D\u30e2\u30c7\u30eb\u306e\u8a2d\u5b9a\u5b9a\u6570
-const LIVE2D_CONFIG = {
-  scale: 0.35,
-  horizontalOffset: 150,  // \u53f3\u5074\u3078\u306e\u30aa\u30d5\u30bb\u30c3\u30c8\uff08px\uff09
-  headerHeight: 64,       // \u30d8\u30c3\u30c0\u30fc\u306e\u9ad8\u3055\uff08px\uff09
-};
+interface Live2DComponentProps {
+  disableMotions?: boolean; // 動作を無効化するフラグ（後方互換性のため残す）
+  screenType?: ScreenType | string; // 画面タイプを明示的に指定（文字列も受け付ける）
+}
 
-const Live2DComponent = () => {
-  const canvasContainerRef = useRef<HTMLCanvasElement>(null);
-  const [app, setApp] = useState<Application | null>(null);
-  const [model, setModel] = useState<any>(null);
-  const modelRef = useRef<any>(null);
+const Live2DComponent = ({ disableMotions = false, screenType }: Live2DComponentProps) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const delegateRef = useRef<LAppDelegate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Dynamic imports for client-side only
-    const setupLive2D = async () => {
+    // resizeView 関数をuseEffect内で定義
+    const resizeView = () => {
+      if (delegateRef.current) {
+        delegateRef.current.onResize();
+      }
+    };
+    const initializeLive2D = async () => {
       try {
-        // Load Cubism Core first (try CDN)
+        setIsLoading(true);
+        setError(null);
+
+        // Load Cubism Core first
         if (!(window as any).Live2DCubismCore) {
+          // WASMのテーブル成長を許可するための設定
+          (window as any).Module = {
+            ALLOW_TABLE_GROWTH: 1,
+            RESERVED_FUNCTION_POINTERS: 1000
+          };
+
           const script = document.createElement('script');
-          // Try to load from CDN first, fallback to local
-          script.src = 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js';
-          script.async = true;
-          
-          try {
-            await new Promise((resolve, reject) => {
-              script.onload = resolve;
-              script.onerror = () => {
-                // Fallback to local file
-                const fallbackScript = document.createElement('script');
-                fallbackScript.src = '/live2dcubismcore.min.js';
-                fallbackScript.onload = resolve;
-                fallbackScript.onerror = reject;
-                document.head.appendChild(fallbackScript);
-              };
-              document.head.appendChild(script);
-            });
-          } catch (e) {
-            console.warn('Failed to load Cubism Core from CDN, using stub');
+          script.src = '/live2dcubismcore.min.js';
+          script.async = false;
+
+          await new Promise<void>((resolve, reject) => {
+            script.onload = () => {
+              // Live2DCubismCoreが正しくロードされたか確認
+              if ((window as any).Live2DCubismCore) {
+                console.log('Live2DCubismCore loaded successfully');
+                resolve();
+              } else {
+                reject(new Error('Live2DCubismCore not found after script load'));
+              }
+            };
+            script.onerror = () => reject(new Error('Failed to load live2dcubismcore.min.js'));
+            document.head.appendChild(script);
+          });
+        }
+
+        if (canvasRef.current) {
+          // LAppDelegateのインスタンスを取得して、キャンバスで初期化
+          const appDelegateInstance = LAppDelegate.getInstance();
+          // 動作無効化フラグを設定
+          if (disableMotions) {
+            (appDelegateInstance as any).setDisableMotions(true);
+          }
+          if (appDelegateInstance.initializeWithCanvas(canvasRef.current)) {
+            appDelegateInstance.run();
+            delegateRef.current = appDelegateInstance;
+            setIsLoading(false);
+          } else {
+            throw new Error('Failed to initialize Live2D delegate');
           }
         }
-        
-        // Then load PIXI
-        const PIXI = await import('pixi.js');
-        (window as any).PIXI = PIXI;
-        
-        // Initialize app after PIXI is loaded
-        await initApp();
       } catch (err) {
-        console.error('Failed to setup Live2D:', err);
-        setError('Failed to initialize Live2D');
+        console.error('Failed to initialize Live2D:', err);
+        setError(`Failed to initialize Live2D: ${err instanceof Error ? err.message : String(err)}`);
         setIsLoading(false);
       }
     };
 
-    setupLive2D();
+    initializeLive2D();
 
+    // リサイズイベントリスナーを追加
+    window.addEventListener('resize', resizeView);
+
+    // クリーンアップ
     return () => {
-      if (modelRef.current) {
-        try {
-          modelRef.current.destroy();
-        } catch (e) {
-          console.error('Error destroying model:', e);
-        }
-        modelRef.current = null;
-      }
-      if (app) {
-        try {
-          app.destroy(true);
-        } catch (e) {
-          console.error('Error destroying app:', e);
-        }
+      window.removeEventListener('resize', resizeView);
+      // delegateRefが存在する場合のみ解放
+      if (delegateRef.current) {
+        LAppDelegate.releaseInstance();
+        delegateRef.current = null;
       }
     };
-  }, []);
-
-  useEffect(() => {
-    if (app) {
-      // 既存のモデルがある場合は先に削除
-      if (modelRef.current) {
-        app.stage.removeChild(modelRef.current as unknown as DisplayObject);
-        modelRef.current.destroy();
-        modelRef.current = null;
-        setModel(null);
-      }
-      // ステージをクリア
-      app.stage.removeChildren();
-      // 新しいモデルを読み込む
-      loadLive2DModel(app, '/live2d/nike01/nike01.model3.json');
-    }
-  }, [app]);
-
-  const initApp = async () => {
-    if (!canvasContainerRef.current) return;
-
-    try {
-      const { Application } = await import('pixi.js');
-      
-      const newApp = new Application({
-        width: window.innerWidth,
-        height: window.innerHeight,
-        view: canvasContainerRef.current,
-        backgroundAlpha: 0,
-        antialias: true,
-        resolution: window.devicePixelRatio || 1,
-      });
-
-      setApp(newApp);
-    } catch (err) {
-      console.error('Failed to initialize PIXI Application:', err);
-      setError('Failed to initialize graphics engine');
-      setIsLoading(false);
-    }
-  };
-
-  const loadLive2DModel = async (currentApp: any, modelPath: string) => {
-    if (!canvasContainerRef.current) return;
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Check if Cubism Core is loaded
-      if (!(window as any).Live2DCubismCore) {
-        throw new Error('Live2D Cubism Core not loaded');
-      }
-      
-      // Dynamic import of Live2D
-      const Live2DModule = await import('pixi-live2d-display-lipsyncpatch/cubism4');
-      const { Live2DModel } = Live2DModule;
-      
-      // Use from() instead of fromSync() for better compatibility
-      const newModel = await Live2DModel.from(modelPath);
-      
-      if (!newModel) {
-        throw new Error('Model failed to load');
-      }
-
-      currentApp.stage.addChild(newModel as any);
-      
-      // Set anchor and position
-      if (newModel.anchor) {
-        newModel.anchor.set(0.5, 0.5);
-      }
-      
-      // デフォルトのポジション設定
-      newModel.scale.set(LIVE2D_CONFIG.scale);
-      
-      // キャラクターを中央に配置（水平オフセットあり）
-      newModel.x = currentApp.renderer.width / 2 + LIVE2D_CONFIG.horizontalOffset;
-      newModel.y = (currentApp.renderer.height + LIVE2D_CONFIG.headerHeight) / 2;
-
-      modelRef.current = newModel;
-      setModel(newModel);
-      setIsLoading(false);
-      
-      console.log('Live2D model loaded successfully');
-    } catch (error) {
-      console.error('Failed to load Live2D model:', error);
-      setError(`Failed to load Live2D model: ${error instanceof Error ? error.message : String(error)}`);
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!app || !model) return;
-
-    const onResize = () => {
-      if (!canvasContainerRef.current) return;
-
-      app.renderer.resize(
-        canvasContainerRef.current.clientWidth,
-        canvasContainerRef.current.clientHeight
-      );
-
-      // リサイズ時にモデル位置を調整
-      model.scale.set(LIVE2D_CONFIG.scale);
-      model.x = app.renderer.width / 2 + LIVE2D_CONFIG.horizontalOffset;
-      model.y = (app.renderer.height + LIVE2D_CONFIG.headerHeight) / 2;
-    };
-
-    window.addEventListener('resize', onResize);
-
-    return () => {
-      window.removeEventListener('resize', onResize);
-    };
-  }, [app, model]);
+  }, []); // 空の依存配列にして、マウント時に一度だけ実行
 
   return (
     <div className="w-screen h-screen fixed top-0 left-0 pointer-events-none z-0">
@@ -206,7 +106,7 @@ const Live2DComponent = () => {
         </div>
       )}
       <canvas
-        ref={canvasContainerRef}
+        ref={canvasRef}
         className="w-full h-full"
         style={{ pointerEvents: 'auto' }}
         onContextMenu={(e) => e.preventDefault()}

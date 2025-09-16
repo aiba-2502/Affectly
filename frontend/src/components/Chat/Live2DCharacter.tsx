@@ -60,9 +60,9 @@ export const Live2DCharacter: React.FC<Live2DCharacterProps> = ({
           // モデルをステージに追加
           app.stage.addChild(model);
 
-          // アイドルモーションを開始
-          model.motion('Idle');
-          
+          // アイドルモーション無効化（リップシンクに集中するため）
+          // model.motion('Idle');
+
           setPixiLoaded(true);
         }).catch((error: any) => {
           console.error('Failed to load Live2D model:', error);

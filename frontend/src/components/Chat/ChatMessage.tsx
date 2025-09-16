@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ChatMessage as ChatMessageType } from '@/types/chat';
-import { UserCircleIcon } from '@heroicons/react/24/solid';
+import { UserCircleIcon, SpeakerWaveIcon, StopIcon } from '@heroicons/react/24/solid';
 import DOMPurify from 'dompurify';
+import { VoiceService } from '@/services/voiceApi';
+import { useLipSyncHandler } from '@/lib/hooks/useLipSyncHandler';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -11,16 +13,66 @@ interface ChatMessageProps {
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const isUser = message.role === 'user';
-  
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { startLipSync, stopLipSync } = useLipSyncHandler();
+
   // XSS対策：メッセージ内容をサニタイズ
   const sanitizedContent = useMemo(() => {
     // DOMPurifyでHTMLタグを除去し、安全なテキストのみを残す
-    return DOMPurify.sanitize(message.content, { 
+    return DOMPurify.sanitize(message.content, {
       ALLOWED_TAGS: [], // すべてのHTMLタグを除去
       ALLOWED_ATTR: [], // すべての属性を除去
       KEEP_CONTENT: true // テキストコンテンツは保持
     });
   }, [message.content]);
+
+  // 音声読み上げ処理
+  const handleVoicePlay = async () => {
+    // 連打対策：ローディング中は何もしない
+    if (isLoading) {
+      return;
+    }
+
+    if (isPlaying) {
+      // 再生中の場合は停止
+      VoiceService.stopVoice();
+      stopLipSync();  // リップシンクも停止
+      setIsPlaying(false);
+    } else {
+      // 再生開始
+      setIsLoading(true);
+      try {
+        await VoiceService.playVoice(sanitizedContent, {
+          onEnded: () => {
+            // 音声再生終了時のコールバック
+            stopLipSync();  // リップシンクを停止
+            setIsPlaying(false);
+          },
+          onError: (error) => {
+            // エラー時のコールバック
+            console.error('音声再生エラー:', error);
+            stopLipSync();  // リップシンクを停止
+            setIsPlaying(false);
+            alert('音声再生に失敗しました');
+          },
+          onLipSyncReady: (audioUrl) => {
+            // リップシンクを開始
+            startLipSync(audioUrl).catch(error => {
+              console.error('リップシンク開始エラー:', error);
+            });
+          }
+        });
+        setIsPlaying(true);
+      } catch (error) {
+        console.error('音声再生エラー:', error);
+        alert('音声再生に失敗しました');
+        setIsPlaying(false);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
   
   return (
     <div className={`flex gap-3 mb-6 ${isUser ? 'flex-row-reverse' : ''}`}>
@@ -51,12 +103,38 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             </p>
           </div>
           
-          {/* タイムスタンプ */}
-          <div className={`text-xs text-gray-500 mt-1 ${isUser ? 'text-right' : ''}`}>
-            {new Date(message.created_at).toLocaleTimeString('ja-JP', {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
+          {/* タイムスタンプとボイスボタン */}
+          <div className={`flex items-center gap-2 mt-1 ${isUser ? 'justify-end' : ''}`}>
+            <div className={`text-xs text-gray-500`}>
+              {new Date(message.created_at).toLocaleTimeString('ja-JP', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+
+            {/* AIメッセージにのみボイスボタンを表示 */}
+            {!isUser && message.role === 'assistant' && (
+              <button
+                onClick={handleVoicePlay}
+                disabled={isLoading}
+                className={`p-1 rounded-full transition-all duration-200 ${
+                  isLoading
+                    ? 'bg-gray-200 cursor-not-allowed'
+                    : isPlaying
+                    ? 'bg-red-500 hover:bg-red-600 text-white'
+                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                }`}
+                title={isPlaying ? '停止' : '読み上げ'}
+              >
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : isPlaying ? (
+                  <StopIcon className="w-4 h-4" />
+                ) : (
+                  <SpeakerWaveIcon className="w-4 h-4" />
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
