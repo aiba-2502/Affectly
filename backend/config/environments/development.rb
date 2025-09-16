@@ -52,7 +52,7 @@ Rails.application.configure do
     "localhost",
     "web",
     /.*\.local/,
-    IPAddr.new("0.0.0.0/0"), # Allow all IP addresses in development
+    IPAddr.new("0.0.0.0/0") # Allow all IP addresses in development
   ]
 
   # Append comments with runtime information tags to SQL queries in logs.

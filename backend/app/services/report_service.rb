@@ -36,6 +36,7 @@ class ReportService
       strengths: generate_strengths,
       thinkingPatterns: generate_thinking_patterns,
       values: generate_values,
+      personalAdvice: generate_personal_advice, # パーソナルアドバイスを追加
       conversationReport: {
         week: generate_weekly_conversation_report,
         month: generate_monthly_conversation_report
@@ -120,6 +121,24 @@ class ReportService
         { id: SecureRandom.uuid, title: "自己理解", description: "自分自身を深く理解することを大切にしています。" },
         { id: SecureRandom.uuid, title: "成長", description: "継続的な学習と成長を重視しています。" }
       ]
+    end
+  end
+
+  # パーソナルアドバイス生成（手動実行時のみ）
+  def generate_personal_advice
+    messages = user.chat_messages
+                   .where(role: "user")
+                   .where("created_at >= ?", 1.month.ago)
+                   .limit(50) # より多くのコンテキストを使用
+                   .pluck(:content)
+
+    Rails.logger.info "Generating personal advice for user #{user.id}"
+
+    if messages.present?
+      analyze_personal_advice_with_ai(messages)
+    else
+      # デフォルトのアドバイス
+      default_personal_advice
     end
   end
 
@@ -722,6 +741,127 @@ class ReportService
     end
   end
 
+  # パーソナルアドバイスをAIで生成
+  def analyze_personal_advice_with_ai(messages)
+    prompt = build_personal_advice_prompt(messages)
+
+    ai_messages = [
+      { role: "system", content: personal_advice_system_prompt },
+      { role: "user", content: prompt }
+    ]
+
+    response = openai_service.chat(
+      ai_messages,
+      temperature: 0.8, # より創造的な回答のため高めに設定
+      max_tokens: 1200
+    )
+
+    parse_personal_advice_response(response)
+  rescue => e
+    Rails.logger.error "Personal advice generation failed: #{e.message}"
+    default_personal_advice
+  end
+
+  # パーソナルアドバイス用のプロンプト構築
+  def build_personal_advice_prompt(messages)
+    messages_text = messages.take(50).join("\n---\n")
+
+    <<~PROMPT
+      以下の会話履歴から、このユーザーに対する個別のアドバイスを生成してください。
+
+      会話履歴：
+      #{messages_text}
+
+      以下のJSON形式で回答してください：
+      {
+        "emotional_patterns": {
+          "summary": "感情パターンの総括（100字以内）",
+          "details": ["具体的なパターン1", "具体的なパターン2"]
+        },
+        "core_values": {
+          "summary": "価値観の軸の総括（100字以内）",
+          "pillars": ["価値観の柱1", "価値観の柱2", "価値観の柱3"]
+        },
+        "action_guidelines": {
+          "career": "キャリアに関するアドバイス（150字以内）",
+          "relationships": "人間関係に関するアドバイス（150字以内）",
+          "life_philosophy": "生き方に関するアドバイス（150字以内）"
+        },
+        "personal_axis": "あなたの「軸」を一言で表すと（30字以内）"
+      }
+    PROMPT
+  end
+
+  # パーソナルアドバイス用のシステムプロンプト
+  def personal_advice_system_prompt
+    <<~SYSTEM
+      あなたはユーザーの会話履歴を分析し、その人の人生をより良くするための具体的で実用的なアドバイスを提供する心理カウンセラー兼キャリアコーチです。
+
+      以下の観点から分析を行い、ユーザーが自分の「軸」を理解し、より良い意思決定ができるようサポートしてください：
+
+      1. 感情パターン：どんな状況でどんな感情を抱きやすいか
+      2. 価値観の軸：何を大切にして生きているか
+      3. 強みと成長機会：活かすべき強みと伸ばすべき領域
+      4. 具体的な行動指針：キャリア、人間関係、生き方における実践的アドバイス
+
+      アドバイスは具体的で、実践可能で、ポジティブな表現を心がけてください。
+      ユーザーの成長と幸福を第一に考え、押し付けがましくならないよう配慮してください。
+    SYSTEM
+  end
+
+  # パーソナルアドバイスのレスポンス解析
+  def parse_personal_advice_response(response)
+    content = response.dig("choices", 0, "message", "content") || response["content"] || "{}"
+    advice = JSON.parse(content)
+
+    # デフォルト値を取得
+    defaults = default_personal_advice
+
+    # キャメルケースに変換して返す（適切なデフォルト構造を保証）
+    {
+      emotionalPatterns: {
+        summary: advice.dig("emotional_patterns", "summary") || defaults[:emotionalPatterns][:summary],
+        details: advice.dig("emotional_patterns", "details") || defaults[:emotionalPatterns][:details]
+      },
+      coreValues: {
+        summary: advice.dig("core_values", "summary") || defaults[:coreValues][:summary],
+        pillars: advice.dig("core_values", "pillars") || defaults[:coreValues][:pillars]
+      },
+      actionGuidelines: {
+        career: advice.dig("action_guidelines", "career") || defaults[:actionGuidelines][:career],
+        relationships: advice.dig("action_guidelines", "relationships") || defaults[:actionGuidelines][:relationships],
+        lifePhilosophy: advice.dig("action_guidelines", "life_philosophy") || defaults[:actionGuidelines][:lifePhilosophy]
+      },
+      personalAxis: advice["personal_axis"] || defaults[:personalAxis]
+    }
+  rescue JSON::ParserError => e
+    Rails.logger.error "Failed to parse personal advice JSON: #{e.message}"
+    default_personal_advice
+  end
+
+  # デフォルトのパーソナルアドバイス
+  def default_personal_advice
+    {
+      emotionalPatterns: {
+        summary: "感情を言語化し、自己理解を深めていく過程にあります。",
+        details: [
+          "新しいことへの挑戦に対して前向きな姿勢を持っています",
+          "困難な状況でも冷静に対処しようとする傾向があります"
+        ]
+      },
+      coreValues: {
+        summary: "成長と調和を大切にしながら、着実に前進しています。",
+        pillars: [ "継続的な成長", "自己理解", "意味のある貢献" ]
+      },
+      actionGuidelines: {
+        career: "あなたの学習意欲と分析力を活かせる環境で、段階的にスキルを磨いていくことをお勧めします。",
+        relationships: "相手の立場を理解しながらも、自分の考えを明確に伝えることでより良い関係が築けるでしょう。",
+        lifePhilosophy: "完璧を求めすぎず、小さな進歩を積み重ねることで、持続可能な成長を実現できます。"
+      },
+      personalAxis: "成長と調和を大切にする実践者"
+    }
+  end
+
   def analysis_system_prompt
     <<~PROMPT
       あなたはユーザーの会話履歴を分析し、その人の特性を深く理解する心理分析の専門家です。
@@ -845,6 +985,7 @@ class ReportService
         strengths: analysis[:strengths],
         thinking_patterns: analysis[:thinkingPatterns],
         values: analysis[:values],
+        personal_advice: analysis[:personalAdvice],
         conversation_report: analysis[:conversationReport],
         analyzed_at: Time.current
       }
@@ -861,6 +1002,7 @@ class ReportService
       strengths: data["strengths"] || [],
       thinkingPatterns: data["thinking_patterns"] || [],
       values: data["values"] || [],
+      personalAdvice: data["personal_advice"] || default_personal_advice,
       conversationReport: data["conversation_report"] || {
         week: generate_weekly_conversation_report,
         month: generate_monthly_conversation_report

@@ -1,10 +1,10 @@
 class JsonWebToken
   # トークンの有効期限定数
   DEFAULT_EXPIRATION = 24.hours
-  
+
   # 環境変数からシークレットキーを取得
-  SECRET_KEY = ENV.fetch('JWT_SECRET_KEY') do
-    Rails.application.credentials.secret_key_base || 
+  SECRET_KEY = ENV.fetch("JWT_SECRET_KEY") do
+    Rails.application.credentials.secret_key_base ||
     Rails.application.secret_key_base
   end
 

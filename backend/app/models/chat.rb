@@ -19,8 +19,8 @@ class Chat < ApplicationRecord
   scope :by_tag, ->(tag_id) { where(tag_id: tag_id) }
   scope :without_tag, -> { where(tag_id: nil) }
   scope :with_tag, -> { where.not(tag_id: nil) }
-  scope :by_date_range, ->(start_date, end_date) { 
-    where(created_at: start_date..end_date) 
+  scope :by_date_range, ->(start_date, end_date) {
+    where(created_at: start_date..end_date)
   }
 
   # Instance Methods
@@ -36,7 +36,7 @@ class Chat < ApplicationRecord
   def latest_message
     messages.order(sent_at: :desc).first
   end
-  
+
   # MongoDB連携用メソッド（将来的な移行用に保持）
   # def messages_doc_count
   #   MessagesDoc.where(chat_uid: chat_uid).count
@@ -47,11 +47,11 @@ class Chat < ApplicationRecord
   # end
 
   def has_summary?
-    summaries.where(period: 'session').exists?
+    summaries.where(period: "session").exists?
   end
 
   def session_summary
-    summaries.find_by(period: 'session')
+    summaries.find_by(period: "session")
   end
 
   private

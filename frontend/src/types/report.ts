@@ -16,6 +16,23 @@ export interface UserValue {
   description: string;
 }
 
+export interface PersonalAdvice {
+  emotionalPatterns: {
+    summary: string;
+    details: string[];
+  };
+  coreValues: {
+    summary: string;
+    pillars: string[];
+  };
+  actionGuidelines: {
+    career: string;
+    relationships: string;
+    lifePhilosophy: string;
+  };
+  personalAxis: string;
+}
+
 export interface KeywordCount {
   keyword: string;
   count: number;
@@ -39,6 +56,7 @@ export interface UserReport {
   strengths: UserStrength[];
   thinkingPatterns: UserThinkingPattern[];
   values: UserValue[];
+  personalAdvice: PersonalAdvice | null;
   conversationReport: {
     week: ConversationReport;
     month: ConversationReport;

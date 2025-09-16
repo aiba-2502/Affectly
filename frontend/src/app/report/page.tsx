@@ -7,6 +7,7 @@ import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { UserReport } from '@/types/report';
 import reportService from '@/services/reportService';
+import PersonalAdviceSection from '@/components/PersonalAdviceSection';
 import dynamic from 'next/dynamic';
 
 // Live2Dコンポーネントを動的インポート（SSR無効化）- コンテナ内表示版
@@ -362,28 +363,15 @@ export default function ReportPage() {
                   )}
                 </div>
 
-                {/* セクション2: 頻出キーワード */}
+                {/* セクション2: パーソナルアドバイス */}
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-3">
-                    頻出キーワード
+                    パーソナルアドバイス
                   </h3>
-                  {isLoadingData ? (
-                    <LoadingSpinner message="キーワードを抽出中です" />
-                  ) : currentReport?.frequentKeywords && currentReport.frequentKeywords.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {currentReport.frequentKeywords.map((item) => (
-                        <span
-                          key={item.keyword}
-                          className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
-                        >
-                          {item.keyword}
-                          <span className="ml-1 text-xs text-blue-500">({item.count})</span>
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-400 text-sm">キーワード分析に必要なデータがありません</p>
-                  )}
+                  <PersonalAdviceSection
+                    advice={reportData?.personalAdvice || null}
+                    isLoading={isLoadingData}
+                  />
                 </div>
 
                 {/* セクション3: 感情とキーワードの相関 */}

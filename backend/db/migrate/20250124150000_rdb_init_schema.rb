@@ -12,7 +12,7 @@
 class RdbInitSchema < ActiveRecord::Migration[8.0]
   def change
     # Create enum type for summaries period
-    create_enum :period_type, ['session', 'daily', 'weekly', 'monthly']
+    create_enum :period_type, [ 'session', 'daily', 'weekly', 'monthly' ]
 
     # ========== Users table ==========
     create_table :users do |t|
@@ -69,52 +69,52 @@ class RdbInitSchema < ActiveRecord::Migration[8.0]
     end
 
     # Add composite indexes for efficient querying
-    add_index :summaries, [:user_id, :period, :tally_start_at]
-    add_index :summaries, [:chat_id, :period]
+    add_index :summaries, [ :user_id, :period, :tally_start_at ]
+    add_index :summaries, [ :chat_id, :period ]
 
     # ========== Messages table ==========
     create_table :messages do |t|
       # Foreign Keys
       t.references :chat, null: false, foreign_key: true, index: true
       t.bigint :sender_id, null: false  # User IDを格納
-      
+
       # Message content
       t.text :content, null: false
-      
+
       # LLM metadata (JSON)
       t.json :llm_metadata
-      
+
       # Emotion analysis
       t.decimal :emotion_score, precision: 3, scale: 2  # 0.00 ~ 1.00
       t.json :emotion_keywords  # Array of keywords
-      
+
       # Message timestamp
       t.datetime :sent_at, null: false
-      
+
       t.timestamps
     end
-    
+
     # Indexes for performance
     add_index :messages, :sender_id
     add_index :messages, :sent_at
-    add_index :messages, [:chat_id, :sent_at], name: 'idx_messages_chat_sent'
-    
+    add_index :messages, [ :chat_id, :sent_at ], name: 'idx_messages_chat_sent'
+
     # Foreign key for sender_id
     add_foreign_key :messages, :users, column: :sender_id
-    
+
     # Check constraint for emotion_score range
     reversible do |dir|
       dir.up do
         execute <<-SQL
-          ALTER TABLE messages 
-          ADD CONSTRAINT chk_emotion_score 
+          ALTER TABLE messages#{' '}
+          ADD CONSTRAINT chk_emotion_score#{' '}
           CHECK (emotion_score >= 0 AND emotion_score <= 1)
         SQL
       end
-      
+
       dir.down do
         execute <<-SQL
-          ALTER TABLE messages 
+          ALTER TABLE messages#{' '}
           DROP CONSTRAINT IF EXISTS chk_emotion_score
         SQL
       end

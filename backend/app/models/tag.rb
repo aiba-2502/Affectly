@@ -5,7 +5,7 @@ class Tag < ApplicationRecord
   has_many :chats, dependent: :nullify
 
   # Validations
-  validates :name, presence: true, 
+  validates :name, presence: true,
                    length: { maximum: 50 },
                    uniqueness: { case_sensitive: false }
   validates :category, length: { maximum: 30 }, allow_blank: true
@@ -15,30 +15,30 @@ class Tag < ApplicationRecord
 
   # Scopes
   scope :by_category, ->(category) { where(category: category) }
-  scope :emotion_tags, -> { where(category: 'emotion') }
-  scope :topic_tags, -> { where(category: 'topic') }
-  scope :value_tags, -> { where(category: 'value') }
-  
+  scope :emotion_tags, -> { where(category: "emotion") }
+  scope :topic_tags, -> { where(category: "topic") }
+  scope :value_tags, -> { where(category: "value") }
+
   # Class Methods
   def self.categories
     {
-      topic: 'topic',      # 話題系タグ
-      emotion: 'emotion',  # 感情系タグ
-      value: 'value'       # 価値観軸タグ
+      topic: "topic",      # 話題系タグ
+      emotion: "emotion",  # 感情系タグ
+      value: "value"       # 価値観軸タグ
     }
   end
 
   # Instance Methods
   def emotion_tag?
-    category == 'emotion'
+    category == "emotion"
   end
 
   def topic_tag?
-    category == 'topic'
+    category == "topic"
   end
 
   def value_tag?
-    category == 'value'
+    category == "value"
   end
 
   private

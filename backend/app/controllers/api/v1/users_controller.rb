@@ -10,14 +10,14 @@ module Api
       def update
         # ユーザー情報を更新（名前とメールのみ）
         if @current_user.update(user_update_params)
-          render json: { 
+          render json: {
             user: user_response(@current_user),
-            message: 'プロフィールを更新しました'
+            message: "プロフィールを更新しました"
           }, status: :ok
         else
-          render json: { 
-            error: '更新に失敗しました',
-            errors: @current_user.errors.full_messages 
+          render json: {
+            error: "更新に失敗しました",
+            errors: @current_user.errors.full_messages
           }, status: :unprocessable_entity
         end
       end
@@ -39,14 +39,14 @@ module Api
       end
 
       def authenticate_user!
-        token = request.headers['Authorization']&.split(' ')&.last
-        return render json: { error: 'Token not provided' }, status: :unauthorized unless token
+        token = request.headers["Authorization"]&.split(" ")&.last
+        return render json: { error: "Token not provided" }, status: :unauthorized unless token
 
         begin
-          payload = JWT.decode(token, Rails.application.credentials.secret_key_base || 'development_secret', true, algorithm: 'HS256').first
-          @current_user = User.find(payload['user_id'])
+          payload = JWT.decode(token, Rails.application.credentials.secret_key_base || "development_secret", true, algorithm: "HS256").first
+          @current_user = User.find(payload["user_id"])
         rescue JWT::DecodeError, ActiveRecord::RecordNotFound
-          render json: { error: 'Invalid token' }, status: :unauthorized
+          render json: { error: "Invalid token" }, status: :unauthorized
         end
       end
     end

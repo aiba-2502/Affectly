@@ -5,37 +5,37 @@
 class Message < ApplicationRecord
   # Associations (based on DB_GUID_RDB_MESSAGES.md)
   belongs_to :chat
-  belongs_to :sender, class_name: 'User', foreign_key: 'sender_id'
-  
+  belongs_to :sender, class_name: "User", foreign_key: "sender_id"
+
   # Validations
   validates :chat_id, presence: true
   validates :sender_id, presence: true
   validates :content, presence: true, length: { maximum: 10_000 }
   validates :sent_at, presence: true
-  validates :emotion_score, numericality: { 
-    greater_than_or_equal_to: 0, 
-    less_than_or_equal_to: 1 
+  validates :emotion_score, numericality: {
+    greater_than_or_equal_to: 0,
+    less_than_or_equal_to: 1
   }, allow_nil: true
-  
+
   # Custom validation for emotion_keywords JSON array
   validate :emotion_keywords_size_limit
-  
+
   # Callbacks
   before_validation :set_sent_at
   before_save :normalize_emotion_keywords
-  
+
   # Scopes
   scope :by_chat, ->(chat_id) { where(chat_id: chat_id) }
   scope :by_sender, ->(sender_id) { where(sender_id: sender_id) }
   scope :recent_first, -> { order(sent_at: :desc) }
   scope :chronological, -> { order(sent_at: :asc) }
   scope :with_emotion, -> { where.not(emotion_score: nil) }
-  
+
   # Class methods
   def self.for_chat(chat_id)
     by_chat(chat_id).chronological
   end
-  
+
   def self.create_user_message(chat_id:, sender_id:, content:, **attrs)
     create!(
       chat_id: chat_id,
@@ -44,7 +44,7 @@ class Message < ApplicationRecord
       **attrs
     )
   end
-  
+
   def self.create_ai_message(chat_id:, content:, llm_metadata: {}, **attrs)
     chat = Chat.find(chat_id)
     create!(
@@ -55,7 +55,7 @@ class Message < ApplicationRecord
       **attrs
     )
   end
-  
+
   def self.create_system_message(chat_id:, content:, **attrs)
     chat = Chat.find(chat_id)
     create!(
@@ -65,48 +65,48 @@ class Message < ApplicationRecord
       **attrs
     )
   end
-  
+
   # Instance methods
   # メッセージ種別の判定はllm_metadataの有無などで判定する場合は、ここに実装
   def user_message?
     llm_metadata.blank?
   end
-  
+
   def ai_message?
     llm_metadata.present?
   end
-  
+
   # emotion_keywordsのヘルパーメソッド（JSON配列として扱う）
   def add_emotion_keyword(keyword)
     self.emotion_keywords ||= []
     self.emotion_keywords << keyword unless emotion_keywords.include?(keyword)
   end
-  
+
   def remove_emotion_keyword(keyword)
     return unless emotion_keywords.is_a?(Array)
     self.emotion_keywords.delete(keyword)
   end
-  
+
   def emotion_keywords_list
     emotion_keywords.is_a?(Array) ? emotion_keywords : []
   end
-  
+
   private
-  
+
   def emotion_keywords_size_limit
     if emotion_keywords.present? && emotion_keywords.is_a?(Array) && emotion_keywords.size > 10
       errors.add(:emotion_keywords, "は10個まで登録可能です")
     end
   end
-  
+
   def set_sent_at
     self.sent_at ||= Time.current
   end
-  
+
   def normalize_emotion_keywords
     # 確実に配列として保存
     if emotion_keywords.present? && !emotion_keywords.is_a?(Array)
-      self.emotion_keywords = [emotion_keywords].flatten.compact
+      self.emotion_keywords = [ emotion_keywords ].flatten.compact
     end
   end
 end
@@ -138,7 +138,7 @@ end
 #   validates :content, presence: true, length: { maximum: 10_000 }
 #   validates :send_at, presence: true
 #   validates :emotion_score, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }, allow_nil: true
-#   
+#
 #   # Custom validation for emotion_keywords array size
 #   validate :emotion_keywords_size_limit
 #
