@@ -4,11 +4,11 @@ import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import BottomNav from '@/components/BottomNav';
-import dynamic from 'next/dynamic';
 import { UserReport } from '@/types/report';
 import reportService from '@/services/reportService';
+import dynamic from 'next/dynamic';
 
-// Live2Dコンポーネントを動的インポート（SSR無効化）
+// Live2Dコンポーネントを動的インポート（SSR無効化）- コンテナ内表示版
 const Live2DContainedComponent = dynamic(() => import('@/components/Live2DContainedComponent'), {
   ssr: false,
   loading: () => (
@@ -26,16 +26,24 @@ const Live2DContainedComponent = dynamic(() => import('@/components/Live2DContai
 export default function ReportPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const [showLive2D, setShowLive2D] = useState(false);
   const [activeTab, setActiveTab] = useState<'week' | 'month'>('week');
   const [reportData, setReportData] = useState<UserReport | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [showLive2D, setShowLive2D] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/login');
     }
   }, [user, isLoading, router]);
+
+
+  useEffect(() => {
+    // レポートデータを取得
+    if (user) {
+      fetchReportData();
+    }
+  }, [user]);
 
   useEffect(() => {
     // Live2Dを遅延ロード
@@ -44,13 +52,6 @@ export default function ReportPage() {
         setShowLive2D(true);
       }, 500);
       return () => clearTimeout(timer);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    // レポートデータを取得
-    if (user) {
-      fetchReportData();
     }
   }, [user]);
 
@@ -69,61 +70,8 @@ export default function ReportPage() {
       setReportData(data);
     } catch (error) {
       console.error('レポートデータの取得に失敗しました:', error);
-
-      // エラー時はモックデータを表示（開発用）
-      const mockData: UserReport = {
-        userId: String(user?.id || ''),
-        userName: user?.name || 'ユーザー',
-        strengths: [
-          { id: '1', title: '強み1', description: '分析中...' },
-          { id: '2', title: '強み2', description: '分析中...' },
-          { id: '3', title: '強み3', description: '分析中...' },
-        ],
-        thinkingPatterns: [
-          { id: '1', title: '思考パターン1', description: '分析中...' },
-          { id: '2', title: '思考パターン2', description: '分析中...' },
-        ],
-        values: [
-          { id: '1', title: '価値観1', description: '分析中...' },
-          { id: '2', title: '価値観2', description: '分析中...' },
-        ],
-        conversationReport: {
-          week: {
-            period: 'week',
-            summary: '今週は主に仕事に関する悩みについて話していました。特にチームメンバーとのコミュニケーションについて深く考察し、自身のリーダーシップスタイルについて新たな気づきを得ました。',
-            frequentKeywords: [
-              { keyword: '仕事', count: 15 },
-              { keyword: 'チーム', count: 12 },
-              { keyword: 'コミュニケーション', count: 10 },
-              { keyword: '成長', count: 8 },
-              { keyword: '目標', count: 7 },
-            ],
-            emotionKeywords: [
-              { emotion: '不安', keywords: ['仕事', 'プレゼン', '締切'] },
-              { emotion: '喜び', keywords: ['達成', '評価', 'チーム'] },
-              { emotion: '悩み', keywords: ['キャリア', '将来', '選択'] },
-            ],
-          },
-          month: {
-            period: 'month',
-            summary: '今月は仕事とプライベートのバランスについて多く話していました。新しいプロジェクトへの挑戦と、自己成長への意欲が見られました。また、人間関係の改善にも取り組んでいました。',
-            frequentKeywords: [
-              { keyword: '成長', count: 45 },
-              { keyword: '挑戦', count: 38 },
-              { keyword: '仕事', count: 35 },
-              { keyword: '目標', count: 30 },
-              { keyword: 'バランス', count: 25 },
-            ],
-            emotionKeywords: [
-              { emotion: '期待', keywords: ['新プロジェクト', '成長', 'チャンス'] },
-              { emotion: '疲れ', keywords: ['残業', 'プレッシャー', '締切'] },
-              { emotion: '満足', keywords: ['達成', '評価', '進歩'] },
-            ],
-          },
-        },
-        updatedAt: new Date().toISOString(),
-      };
-      setReportData(mockData);
+      // エラー時はnullを設定（分析結果なしの表示）
+      setReportData(null);
     } finally {
       setIsLoadingData(false);
     }
@@ -152,98 +100,105 @@ export default function ReportPage() {
         </div>
       </div>
 
-      {/* Main Content - 2カラムレイアウト */}
+      {/* Main Content - 左右分割レイアウト */}
       <div className="flex-1 flex relative overflow-hidden">
-        {/* 左カラム - AI分析結果 */}
-        <div className="w-80 lg:w-96 xl:w-[28rem] bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto">
-          <div className="p-6 space-y-4">
-            {/* Live2Dキャラクター表示エリア */}
-            <div className="h-48 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg overflow-hidden relative">
-              {showLive2D ? (
-                <Live2DContainedComponent screenType="report" />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-gray-400 text-center">
-                    <div className="animate-pulse">
-                      <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-2"></div>
-                      <p className="text-xs">準備中...</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+        {/* 左カラム - Live2D Character エリア - 拡大版 */}
+        <div className="w-80 lg:w-96 xl:w-[28rem] bg-gradient-to-br from-purple-50 to-pink-50 border-r border-gray-200 flex-shrink-0 relative overflow-hidden">
+          {/* Live2Dコンポーネントを配置 - コンテナ全域を表示領域として使用 */}
+          {showLive2D ? (
+            <div className="absolute inset-0">
+              <Live2DContainedComponent screenType="report" />
             </div>
-
-            {/* AI分析カード */}
-            <div className="space-y-4">
-              {/* 強みカード */}
-              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <h3 className="text-base font-semibold text-gray-900 mb-3">
-                  {user.name || 'あなた'}の強み
-                </h3>
-                <div className="space-y-2">
-                  {isLoadingData ? (
-                    <div className="animate-pulse">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                    </div>
-                  ) : (
-                    reportData?.strengths.map((strength) => (
-                      <div key={strength.id} className="bg-gray-50 rounded p-3">
-                        <p className="text-sm text-gray-600">{strength.description}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* 思考特徴カード */}
-              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <h3 className="text-base font-semibold text-gray-900 mb-3">
-                  {user.name || 'あなた'}の思考特徴
-                </h3>
-                <div className="space-y-2">
-                  {isLoadingData ? (
-                    <div className="animate-pulse">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                    </div>
-                  ) : (
-                    reportData?.thinkingPatterns.map((pattern) => (
-                      <div key={pattern.id} className="bg-gray-50 rounded p-3">
-                        <p className="text-sm text-gray-600">{pattern.description}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* 価値観カード */}
-              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <h3 className="text-base font-semibold text-gray-900 mb-3">
-                  {user.name || 'あなた'}の価値観
-                </h3>
-                <div className="space-y-2">
-                  {isLoadingData ? (
-                    <div className="animate-pulse">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                    </div>
-                  ) : (
-                    reportData?.values.map((value) => (
-                      <div key={value.id} className="bg-gray-50 rounded p-3">
-                        <p className="text-sm text-gray-600">{value.description}</p>
-                      </div>
-                    ))
-                  )}
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-gray-400 text-center">
+                <div className="animate-pulse">
+                  <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-2"></div>
+                  <p className="text-xs">キャラクターを読み込み中...</p>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* 右カラム - 会話の要約・キーワード分析 */}
+        {/* 右カラム - レポートコンテンツ */}
         <div className="flex-1 overflow-y-auto bg-gray-50">
           <div className="container mx-auto px-4 py-6 max-w-4xl">
+            {/* AI分析セクション */}
+            <div className="space-y-6 mb-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* 強みカード */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">
+                    {user.name || 'あなた'}の強み
+                  </h3>
+                  <div className="space-y-3">
+                    {isLoadingData ? (
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+                        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                      </div>
+                    ) : reportData && reportData.strengths && reportData.strengths.length > 0 ? (
+                      reportData.strengths.slice(0, 2).map((strength) => (
+                        <div key={strength.id} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
+                          <p className="text-sm leading-relaxed text-gray-700">{strength.description}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-400">分析結果がありません</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* 思考特徴カード */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">
+                    {user.name || 'あなた'}の思考特徴
+                  </h3>
+                  <div className="space-y-3">
+                    {isLoadingData ? (
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+                        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                      </div>
+                    ) : reportData && reportData.thinkingPatterns && reportData.thinkingPatterns.length > 0 ? (
+                      reportData.thinkingPatterns.slice(0, 2).map((pattern) => (
+                        <div key={pattern.id} className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3 border border-green-100">
+                          <p className="text-sm leading-relaxed text-gray-700">{pattern.description}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-400">分析結果がありません</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* 価値観カード */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">
+                    {user.name || 'あなた'}の価値観
+                  </h3>
+                  <div className="space-y-3">
+                    {isLoadingData ? (
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+                        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                      </div>
+                    ) : reportData && reportData.values && reportData.values.length > 0 ? (
+                      reportData.values.slice(0, 2).map((value) => (
+                        <div key={value.id} className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 border border-purple-100">
+                          <p className="text-sm leading-relaxed text-gray-700">{value.description}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-400">分析結果がありません</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 会話分析セクション */}
             <div className="bg-white rounded-lg shadow-sm">
               {/* タブ */}
               <div className="border-b border-gray-200">
@@ -283,9 +238,14 @@ export default function ReportPage() {
                       <div className="h-4 bg-gray-200 rounded w-5/6 mb-2"></div>
                       <div className="h-4 bg-gray-200 rounded w-4/6"></div>
                     </div>
-                  ) : (
+                  ) : currentReport?.summary && currentReport.summary !== "この期間の会話履歴はありません。" ? (
                     <p className="text-gray-700 leading-relaxed">
-                      {currentReport?.summary}
+                      {currentReport.summary}
+                    </p>
+                  ) : (
+                    <p className="text-gray-400">
+                      この期間の分析可能な会話データがありません。
+                      AIとの対話を続けることで、より詳細な分析結果が表示されます。
                     </p>
                   )}
                 </div>
@@ -301,9 +261,9 @@ export default function ReportPage() {
                       <div className="h-8 bg-gray-200 rounded-full w-24"></div>
                       <div className="h-8 bg-gray-200 rounded-full w-16"></div>
                     </div>
-                  ) : (
+                  ) : currentReport?.frequentKeywords && currentReport.frequentKeywords.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {currentReport?.frequentKeywords.map((item) => (
+                      {currentReport.frequentKeywords.map((item) => (
                         <span
                           key={item.keyword}
                           className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
@@ -313,6 +273,8 @@ export default function ReportPage() {
                         </span>
                       ))}
                     </div>
+                  ) : (
+                    <p className="text-gray-400 text-sm">キーワード分析に必要なデータがありません</p>
                   )}
                 </div>
 
@@ -327,9 +289,9 @@ export default function ReportPage() {
                       <div className="h-6 bg-gray-200 rounded w-5/6"></div>
                       <div className="h-6 bg-gray-200 rounded w-4/6"></div>
                     </div>
-                  ) : (
+                  ) : currentReport?.emotionKeywords && currentReport.emotionKeywords.length > 0 ? (
                     <div className="space-y-3">
-                      {currentReport?.emotionKeywords.map((item) => (
+                      {currentReport.emotionKeywords.map((item) => (
                         <div key={item.emotion} className="flex items-start">
                           <span className="font-medium text-gray-700 min-w-[80px]">
                             {item.emotion}
@@ -341,6 +303,8 @@ export default function ReportPage() {
                         </div>
                       ))}
                     </div>
+                  ) : (
+                    <p className="text-gray-400 text-sm">感情分析に必要なデータがありません</p>
                   )}
                 </div>
               </div>

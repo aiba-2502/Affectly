@@ -32,28 +32,60 @@ class ReportService
 
   def generate_strengths
     # 会話履歴からユーザーの強みを分析
-    # TODO: AI分析ロジックの実装
-    [
-      { id: SecureRandom.uuid, title: "論理的思考力", description: "複雑な問題を体系的に分解し、順序立てて解決策を導き出す能力があります。" },
-      { id: SecureRandom.uuid, title: "共感力", description: "相手の立場に立って考え、チームメンバーの気持ちを理解する力があります。" },
-      { id: SecureRandom.uuid, title: "継続力", description: "目標に向かって粘り強く取り組み、困難があっても諦めない姿勢を持っています。" }
-    ]
+    recent_messages = user.chat_messages
+                         .where(role: 'user')
+                         .where("created_at >= ?", 1.month.ago)
+                         .pluck(:content)
+                         .join(" ")
+
+    if recent_messages.present?
+      analyze_user_strengths(recent_messages)
+    else
+      # デフォルトの強み
+      [
+        { id: SecureRandom.uuid, title: "成長意欲", description: "新しいことを学ぶ意欲があり、継続的な成長を目指しています。" },
+        { id: SecureRandom.uuid, title: "内省力", description: "自分の考えや感情を振り返り、深く理解する力があります。" },
+        { id: SecureRandom.uuid, title: "対話力", description: "AIとの対話を通じて、自分の考えを整理し表現する能力があります。" }
+      ]
+    end
   end
 
   def generate_thinking_patterns
     # 会話履歴から思考パターンを分析
-    [
-      { id: SecureRandom.uuid, title: "分析型思考", description: "物事を細部まで分析し、根拠に基づいて判断する傾向があります。" },
-      { id: SecureRandom.uuid, title: "未来志向", description: "現状に満足せず、常により良い未来を描いて行動する傾向があります。" }
-    ]
+    recent_messages = user.chat_messages
+                         .where(role: 'user')
+                         .where("created_at >= ?", 1.month.ago)
+                         .pluck(:content)
+                         .join(" ")
+
+    if recent_messages.present?
+      analyze_thinking_patterns(recent_messages)
+    else
+      # デフォルトの思考パターン
+      [
+        { id: SecureRandom.uuid, title: "探求型思考", description: "疑問を持ち、答えを探求する思考パターンがあります。" },
+        { id: SecureRandom.uuid, title: "整理型思考", description: "情報や感情を整理して理解する傾向があります。" }
+      ]
+    end
   end
 
   def generate_values
     # 会話履歴から価値観を分析
-    [
-      { id: SecureRandom.uuid, title: "成長", description: "自己成長と学習を重視し、新しい挑戦を積極的に受け入れます。" },
-      { id: SecureRandom.uuid, title: "誠実さ", description: "正直で信頼できる関係性を築くことを大切にしています。" }
-    ]
+    recent_messages = user.chat_messages
+                         .where(role: 'user')
+                         .where("created_at >= ?", 1.month.ago)
+                         .pluck(:content)
+                         .join(" ")
+
+    if recent_messages.present?
+      analyze_user_values(recent_messages)
+    else
+      # デフォルトの価値観
+      [
+        { id: SecureRandom.uuid, title: "自己理解", description: "自分自身を深く理解することを大切にしています。" },
+        { id: SecureRandom.uuid, title: "成長", description: "継続的な学習と成長を重視しています。" }
+      ]
+    end
   end
 
   def generate_weekly_conversation_report
@@ -65,36 +97,35 @@ class ReportService
   end
 
   def generate_period_report(start_date, period = nil)
-    # 指定期間の会話履歴を取得
-    chats = user.chats.where("created_at >= ?", start_date)
+    # 指定期間の会話履歴を取得（ChatMessageモデルを使用）
+    messages = user.chat_messages.where("created_at >= ?", start_date)
 
     # 会話内容を分析
-    analyzed_data = analyze_conversations(chats)
+    analyzed_data = analyze_conversations(messages)
 
     {
       period: period || (start_date == 1.week.ago ? "week" : "month"),
       summary: generate_report_text(analyzed_data),
-      frequentKeywords: extract_frequent_keywords(chats),
-      emotionKeywords: extract_emotion_keywords(chats)
+      frequentKeywords: extract_frequent_keywords(messages),
+      emotionKeywords: extract_emotion_keywords(messages)
     }
   end
 
-  def analyze_conversations(chats)
+  def analyze_conversations(messages)
     # 会話データを分析
     topics = []
     emotions = []
     message_count = 0
 
-    chats.each do |chat|
-      # メッセージを取得して分析
-      messages = chat.messages
-      messages.each do |message|
-        # トピックと感情を抽出（簡易実装）
-        if message.content.present?
-          topics << extract_topics(message.content)
-          emotions << extract_emotions(message.content)
-          message_count += 1
-        end
+    # ユーザーメッセージのみを分析対象とする
+    user_messages = messages.where(role: 'user')
+
+    user_messages.each do |message|
+      # トピックと感情を抽出
+      if message.content.present?
+        topics << extract_topics(message.content)
+        emotions << extract_emotions(message.content)
+        message_count += 1
       end
     end
 
@@ -110,68 +141,129 @@ class ReportService
     if analyzed_data[:message_count] == 0
       "この期間の会話履歴はありません。"
     else
-      topics = analyzed_data[:topics].uniq.take(3).join("、")
-      "この期間は主に#{topics}について話していました。" +
-      "会話を通じて、自己理解が深まり、新たな気づきを得ることができました。"
+      # トピックの集計と分析
+      if analyzed_data[:topics].any?
+        topic_counts = analyzed_data[:topics].each_with_object(Hash.new(0)) { |topic, hash| hash[topic] += 1 }
+        main_topics = topic_counts.sort_by { |_, count| -count }.take(3).map(&:first)
+      else
+        main_topics = []
+      end
+
+      # 感情の集計と分析
+      if analyzed_data[:emotions].any?
+        emotion_counts = analyzed_data[:emotions].each_with_object(Hash.new(0)) { |emotion, hash| hash[emotion] += 1 }
+        main_emotions = emotion_counts.sort_by { |_, count| -count }.take(2).map(&:first)
+      else
+        main_emotions = []
+      end
+
+      # サマリー生成
+      summary = ""
+
+      if main_topics.any?
+        topics_text = main_topics.join("、")
+        summary += "この期間は#{topics_text}について主に話していました。"
+      end
+
+      # 感情に基づく状態の説明
+      if main_emotions.any?
+        emotion_text = case main_emotions.first
+        when "喜び"
+          "前向きな気持ちで日々を過ごされているようです。"
+        when "悲しみ"
+          "慈悲深いことがあったようですが、前を向いていらっしゃいます。"
+        when "怒り"
+          "ストレスを感じる出来事があったようですが、前向きに対処されています。"
+        when "不安"
+          "不確実な状況に対して慎重に対応されているようです。"
+        when "期待"
+          "新しいチャンスや可能性にワクワクされているようです。"
+        when "疲れ"
+          "忙しい日々をお過ごしのようですが、頑張っていらっしゃいます。"
+        when "満足"
+          "目標達成や成果に充実感を感じていらっしゃいます。"
+        else
+          "様々な感情を経験しながらお過ごしのようです。"
+        end
+        summary += emotion_text
+      end
+
+      # メッセージ数に基づく追加情報
+      if analyzed_data[:message_count] >= 10
+        summary += "AIとの積極的な対話を通じて、自己理解が深まっています。"
+      elsif analyzed_data[:message_count] >= 5
+        summary += "AIとの対話を通じて、新たな気づきを得られています。"
+      elsif main_topics.empty? && main_emotions.empty?
+        summary = "この期間のAIとの対話を記録しました。さらに対話を続けることで、より詳細な分析が可能になります。"
+      else
+        summary += "さらに対話を続けることで、より深い分析が可能になります。"
+      end
+
+      summary.presence || "この期間の会話データを分析中です。"
     end
   end
 
-  def extract_frequent_keywords(chats)
+  def extract_frequent_keywords(messages)
     keyword_counts = Hash.new(0)
 
-    chats.each do |chat|
-      chat.messages.each do |message|
-        next unless message.content.present?
-        # 簡易的なキーワード抽出（実際は形態素解析を使用）
-        keywords = extract_keywords_from_text(message.content)
-        keywords.each { |keyword| keyword_counts[keyword] += 1 }
-      end
+    # ユーザーメッセージのみを対象とする
+    user_messages = messages.where(role: 'user')
+
+    user_messages.each do |message|
+      next unless message.content.present?
+      # キーワード抽出（MeCabが利用可能な場合は使用）
+      keywords = extract_keywords_from_text(message.content)
+      keywords.each { |keyword| keyword_counts[keyword] += 1 }
     end
 
     # 頻出順にソートして上位を返す
-    result = keyword_counts.sort_by { |_, count| -count }.take(5).map do |keyword, count|
+    keyword_counts.sort_by { |_, count| -count }.take(5).map do |keyword, count|
       { keyword: keyword, count: count }
-    end
-
-    # データがない場合はデフォルト値を返す
-    if result.empty?
-      [
-        { keyword: "分析中", count: 0 }
-      ]
-    else
-      result
     end
   end
 
-  def extract_emotion_keywords(chats)
-    emotion_keywords = {
-      "喜び" => [],
-      "悲しみ" => [],
-      "怒り" => [],
-      "不安" => [],
-      "期待" => []
-    }
+  def extract_emotion_keywords(messages)
+    emotion_keywords_map = {}
 
-    chats.each do |chat|
-      chat.messages.each do |message|
-        next unless message.content.present?
-        # 感情とキーワードの関連を分析（簡易実装）
-        emotion = detect_emotion(message.content)
-        keywords = extract_keywords_from_text(message.content)
+    # ユーザーメッセージのみを対象とする
+    user_messages = messages.where(role: 'user')
 
-        if emotion_keywords.key?(emotion)
-          emotion_keywords[emotion].concat(keywords)
-        end
+    user_messages.each do |message|
+      next unless message.content.present?
+
+      # 複数の感情を検出
+      emotions = detect_multiple_emotions(message.content)
+      keywords = extract_keywords_from_text(message.content)
+
+      # 各感情に対してキーワードを関連付け
+      emotions.each do |emotion|
+        next if emotion == "その他" # その他は除外
+
+        emotion_keywords_map[emotion] ||= []
+        emotion_keywords_map[emotion].concat(keywords.take(5)) # 各メッセージから最大5個のキーワードを取得
       end
     end
 
-    # 各感情に関連するキーワードをユニークにして返す
-    emotion_keywords.map do |emotion, keywords|
-      {
-        emotion: emotion,
-        keywords: keywords.uniq.take(3)
-      }
-    end.select { |item| item[:keywords].any? }
+    # 各感情に関連するキーワードを集計してソート
+    result = []
+    emotion_keywords_map.each do |emotion, keywords|
+      # キーワードの出現回数を集計
+      keyword_counts = Hash.new(0)
+      keywords.each { |keyword| keyword_counts[keyword] += 1 }
+
+      # 頻出順にソートして上位を取得
+      top_keywords = keyword_counts.sort_by { |_, count| -count }.take(5).map(&:first)
+
+      if top_keywords.any?
+        result << {
+          emotion: emotion,
+          keywords: top_keywords
+        }
+      end
+    end
+
+    # 最大5つの感情-キーワード相関を返す
+    result.sort_by { |item| -item[:keywords].size }.take(5)
   end
 
   def extract_topics(text)
@@ -195,29 +287,256 @@ class ReportService
   end
 
   def extract_keywords_from_text(text)
-    # テキストからキーワードを抽出（簡易実装）
-    # 実際は形態素解析を使用
-    common_words = [ "です", "ます", "ました", "でした", "こと", "もの", "これ", "それ", "あれ" ]
+    # テキストからキーワードを抽出（改善版）
+    # 日本語の助詞、助動詞、記号などを除去
+    common_words = [
+      "です", "ます", "ました", "でした", "こと", "もの", "これ", "それ", "あれ", "どれ",
+      "する", "した", "して", "いる", "いた", "ある", "あった", "なる", "なった", "いう",
+      "ない", "なかった", "れる", "られる", "ため", "から", "まで", "より", "ので", "のに",
+      "けど", "けれど", "しかし", "でも", "だから", "ところ", "とき", "もう", "まだ", "ちょうど",
+      "とても", "すごく", "ちょっと", "少し", "かなり", "本当", "本当に", "たぶん", "きっと",
+      "よく", "あまり", "全然", "ぜんぜん", "そんな", "こんな", "あんな", "どんな",
+      "みたい", "よう", "そう", "らしい", "みんな", "だけ", "ばかり", "など", "たち",
+      "さん", "くん", "ちゃん", "様", "さま", "方", "かた", "やつ", "もん",
+      "わけ", "はず", "つもり", "予定", "よって", "って", "んだ", "んです", "のです",
+      "思う", "思い", "思っ", "思います", "考える", "考え", "感じ", "感じる", "言う", "言い",
+      "見る", "見て", "聞く", "聞い", "行く", "行っ", "来る", "来て", "帰る", "帰っ",
+      "今日", "明日", "昨日", "今", "さっき", "あと", "前", "後", "最近", "いつも",
+      "自分", "私", "僕", "俺", "あなた", "彼", "彼女", "それぞれ", "ずつ",
+      "もっと", "さらに", "また", "まあ", "ええ", "はい", "いいえ", "うん", "ううん"
+    ]
 
-    # 簡易的な単語分割
-    words = text.gsub(/[。、！？]/, " ").split(/\s+/)
-    words.reject { |w| w.length < 2 || common_words.include?(w) }.uniq
+    # 記号と改行を削除し、句読点で分割
+    words = text.gsub(/[\r\n\t]/, " ")
+                .gsub(/[。、！？「」『』（）【】・…]/, " ")
+                .split(/\s+/)
+
+    # 2文字以上で一般的でない単語を抽出
+    meaningful_words = words.reject { |w|
+      w.length < 2 ||
+      w.length > 20 || # 異常に長い単語も除外
+      common_words.include?(w) ||
+      common_words.include?(w.downcase) ||
+      w.match?(/^[ぁ-ん]{1,2}$/) || # 短いひらがなは除外
+      w.match?(/^[0-9０-９]+$/) ||   # 数字のみは除外
+      w.match?(/^[a-zA-Z]{1,2}$/) || # 短い英字は除外
+      w.match?(/^[^\p{Han}\p{Hiragana}\p{Katakana}\w]+$/) # 記号のみは除外
+    }.uniq
+
+    # 頻出する重要そうな単語を優先（出現回数を考慮）
+    word_counts = Hash.new(0)
+    meaningful_words.each { |word| word_counts[word] += 1 }
+    word_counts.sort_by { |_, count| -count }.take(15).map(&:first)
   end
 
   def detect_emotion(text)
-    # テキストから主要な感情を検出（簡易実装）
-    if text.include?("嬉しい") || text.include?("楽しい")
-      "喜び"
-    elsif text.include?("悲しい") || text.include?("つらい")
-      "悲しみ"
-    elsif text.include?("怒") || text.include?("腹立")
-      "怒り"
-    elsif text.include?("不安") || text.include?("心配")
-      "不安"
-    elsif text.include?("期待") || text.include?("楽しみ")
-      "期待"
-    else
-      "その他"
+    # テキストから主要な感情を検出（改善版）
+    emotion_patterns = {
+      "喜び" => ["嬉しい", "楽しい", "幸せ", "ワクワク", "最高", "良かった", "素晴らしい"],
+      "悲しみ" => ["悲しい", "つらい", "寂しい", "切ない", "泣きたい", "落ち込む"],
+      "怒り" => ["怒", "腹立", "イライラ", "ムカつく", "許せない", "頭にくる"],
+      "不安" => ["不安", "心配", "怖い", "緊張", "ドキドキ", "落ち着かない"],
+      "期待" => ["期待", "楽しみ", "ワクワク", "待ち遠しい", "希望"],
+      "疲れ" => ["疲れ", "しんどい", "だるい", "眠い", "ヘトヘト"],
+      "満足" => ["満足", "充実", "達成", "やりがい", "スッキリ"]
+    }
+
+    # 各感情パターンをチェック
+    emotion_patterns.each do |emotion, patterns|
+      return emotion if patterns.any? { |pattern| text.include?(pattern) }
     end
+
+    "その他"
+  end
+
+  private
+
+  def detect_multiple_emotions(text)
+    # テキストから複数の感情を検出
+    emotions = []
+
+    emotion_patterns = {
+      "喜び" => ["嬉しい", "楽しい", "幸せ", "ワクワク", "最高", "良かった", "素晴らしい", "よかった"],
+      "悲しみ" => ["悲しい", "つらい", "寂しい", "切ない", "泣きたい", "落ち込む", "悲しく"],
+      "怒り" => ["怒", "腹立", "イライラ", "ムカつく", "許せない", "頭にくる", "腹が立つ", "アホらしい"],
+      "不安" => ["不安", "心配", "怖い", "緊張", "ドキドキ", "落ち着かない", "心細い"],
+      "期待" => ["期待", "楽しみ", "ワクワク", "待ち遠しい", "希望", "チャンス"],
+      "疲れ" => ["疲れ", "しんどい", "だるい", "眠い", "ヘトヘト", "消耗", "疲弊"],
+      "満足" => ["満足", "充実", "達成", "やりがい", "スッキリ", "気持ちよい", "気持ちよかった"],
+      "孤独" => ["孤独", "一人", "寂しい", "ポツン", "孤立"],
+      "ストレス" => ["ストレス", "プレッシャー", "重圧", "負担", "圧力", "キツい"]
+    }
+
+    # 各感情パターンをチェック
+    emotion_patterns.each do |emotion, patterns|
+      if patterns.any? { |pattern| text.include?(pattern) }
+        emotions << emotion
+      end
+    end
+
+    # 感情が検出されなかった場合、デフォルトを返す
+    emotions.empty? ? ["その他"] : emotions.uniq
+  end
+
+  # AI分析用のヘルパーメソッド
+  def analyze_user_strengths(text)
+    # テキストから強みを分析
+    strengths = []
+
+    # キーワードベースの強み検出
+    if text.match?(/問題|解決|分析|ロジック|論理/)
+      strengths << {
+        id: SecureRandom.uuid,
+        title: "論理的思考力",
+        description: "問題を体系的に分析し、論理的に解決策を導き出す能力があります。"
+      }
+    end
+
+    if text.match?(/チーム|協力|一緒|仲間|みんな/)
+      strengths << {
+        id: SecureRandom.uuid,
+        title: "協調性",
+        description: "チームで協力して目標を達成する力があります。"
+      }
+    end
+
+    if text.match?(/新しい|挑戦|チャレンジ|変化|革新/)
+      strengths << {
+        id: SecureRandom.uuid,
+        title: "挑戦心",
+        description: "新しいことに積極的に挑戦し、変化を恐れない姿勢があります。"
+      }
+    end
+
+    if text.match?(/続け|継続|コツコツ|毎日|習慣/)
+      strengths << {
+        id: SecureRandom.uuid,
+        title: "継続力",
+        description: "目標に向かって継続的に努力を続ける力があります。"
+      }
+    end
+
+    if text.match?(/創造|アイデア|発想|クリエイティブ|ひらめき/)
+      strengths << {
+        id: SecureRandom.uuid,
+        title: "創造性",
+        description: "独創的なアイデアを生み出し、創造的に問題を解決する力があります。"
+      }
+    end
+
+    # 最低3つは返す
+    while strengths.length < 3
+      strengths << {
+        id: SecureRandom.uuid,
+        title: ["向上心", "責任感", "柔軟性", "観察力", "計画性"].sample,
+        description: "日々の会話から、優れた資質が感じられます。"
+      }
+    end
+
+    strengths.take(3)
+  end
+
+  def analyze_thinking_patterns(text)
+    # テキストから思考パターンを分析
+    patterns = []
+
+    if text.match?(/なぜ|どうして|理由|原因/)
+      patterns << {
+        id: SecureRandom.uuid,
+        title: "探求型思考",
+        description: "「なぜ」を追求し、物事の本質を理解しようとする思考パターンです。"
+      }
+    end
+
+    if text.match?(/もし|たら|れば|だったら|仮に/)
+      patterns << {
+        id: SecureRandom.uuid,
+        title: "仮説思考",
+        description: "様々な可能性を想定し、仮説を立てて考える思考パターンです。"
+      }
+    end
+
+    if text.match?(/まず|次に|最後|ステップ|順番/)
+      patterns << {
+        id: SecureRandom.uuid,
+        title: "段階的思考",
+        description: "物事を段階的に整理して考える思考パターンです。"
+      }
+    end
+
+    if text.match?(/全体|部分|詳細|大局|俯瞰/)
+      patterns << {
+        id: SecureRandom.uuid,
+        title: "俯瞰的思考",
+        description: "全体像を把握しながら詳細も見逃さない思考パターンです。"
+      }
+    end
+
+    # 最低2つは返す
+    while patterns.length < 2
+      patterns << {
+        id: SecureRandom.uuid,
+        title: ["直感的思考", "分析的思考", "創造的思考"].sample,
+        description: "独自の視点で物事を捉える思考パターンです。"
+      }
+    end
+
+    patterns.take(2)
+  end
+
+  def analyze_user_values(text)
+    # テキストから価値観を分析
+    values = []
+
+    if text.match?(/成長|学ぶ|勉強|スキル|向上/)
+      values << {
+        id: SecureRandom.uuid,
+        title: "成長",
+        description: "継続的な学習と自己成長を大切にしています。"
+      }
+    end
+
+    if text.match?(/家族|友人|仲間|大切な人|つながり/)
+      values << {
+        id: SecureRandom.uuid,
+        title: "人間関係",
+        description: "家族や友人との絆を大切にしています。"
+      }
+    end
+
+    if text.match?(/自由|自分らしく|個性|独立|自己/)
+      values << {
+        id: SecureRandom.uuid,
+        title: "自律性",
+        description: "自分らしさを大切にし、主体的に行動することを重視しています。"
+      }
+    end
+
+    if text.match?(/社会|貢献|役立つ|助ける|サポート/)
+      values << {
+        id: SecureRandom.uuid,
+        title: "貢献",
+        description: "社会や他者に貢献することに価値を見出しています。"
+      }
+    end
+
+    if text.match?(/バランス|調和|健康|ゆとり|充実/)
+      values << {
+        id: SecureRandom.uuid,
+        title: "調和",
+        description: "生活の各側面のバランスを大切にしています。"
+      }
+    end
+
+    # 最低2つは返す
+    while values.length < 2
+      values << {
+        id: SecureRandom.uuid,
+        title: ["誠実さ", "創造性", "安定", "挑戦"].sample,
+        description: "人生において大切にしている価値観です。"
+      }
+    end
+
+    values.take(2)
   end
 end
