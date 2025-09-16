@@ -7,7 +7,30 @@ class ReportService
   end
 
   def generate_report
-    {
+    # 既存の分析結果を取得
+    existing_summary = find_or_create_current_summary
+
+    # 新規メッセージがあるかチェック
+    if existing_summary.needs_new_analysis?
+      # 分析が必要であることを通知（既存データも返す）
+      {
+        needsAnalysis: true,
+        lastAnalyzedAt: existing_summary.updated_at,
+        existingData: parse_existing_analysis(existing_summary),
+        message: "新しいメッセージが追加されました。AI分析を実行できます。"
+      }
+    else
+      # 既存の分析結果を返す（API呼び出しなし）
+      parse_existing_analysis(existing_summary)
+    end
+  end
+
+  # 手動分析実行
+  def execute_analysis
+    Rails.logger.info "Executing AI analysis for user #{user.id}"
+
+    # AI分析を実行
+    analysis_result = {
       userId: user.id.to_s,
       userName: user.name,
       strengths: generate_strengths,
@@ -19,6 +42,11 @@ class ReportService
       },
       updatedAt: Time.current.iso8601
     }
+
+    # 分析結果をsummariesテーブルに保存
+    save_analysis_to_summary(analysis_result)
+
+    analysis_result
   end
 
   def generate_weekly_report
@@ -34,7 +62,7 @@ class ReportService
   def generate_strengths
     # 会話履歴からユーザーの強みを分析
     recent_messages = user.chat_messages
-                         .where(role: 'user')
+                         .where(role: "user")
                          .where("created_at >= ?", 1.month.ago)
                          .limit(20)
                          .pluck(:content)
@@ -54,7 +82,7 @@ class ReportService
   def generate_thinking_patterns
     # 会話履歴から思考パターンを分析
     recent_messages = user.chat_messages
-                         .where(role: 'user')
+                         .where(role: "user")
                          .where("created_at >= ?", 1.month.ago)
                          .limit(20)
                          .pluck(:content)
@@ -73,7 +101,7 @@ class ReportService
   def generate_values
     # 会話履歴から価値観を分析
     recent_messages = user.chat_messages
-                         .where(role: 'user')
+                         .where(role: "user")
                          .where("created_at >= ?", 1.month.ago)
                          .limit(20)
                          .pluck(:content)
@@ -125,7 +153,7 @@ class ReportService
     message_count = 0
 
     # ユーザーメッセージのみを分析対象とする
-    user_messages = messages.where(role: 'user')
+    user_messages = messages.where(role: "user")
 
     user_messages.each do |message|
       # トピックと感情を抽出
@@ -214,7 +242,7 @@ class ReportService
     keyword_counts = Hash.new(0)
 
     # ユーザーメッセージのみを対象とする
-    user_messages = messages.where(role: 'user')
+    user_messages = messages.where(role: "user")
 
     user_messages.each do |message|
       next unless message.content.present?
@@ -233,7 +261,7 @@ class ReportService
     emotion_keywords_map = {}
 
     # ユーザーメッセージのみを対象とする
-    user_messages = messages.where(role: 'user')
+    user_messages = messages.where(role: "user")
 
     user_messages.each do |message|
       next unless message.content.present?
@@ -339,13 +367,13 @@ class ReportService
   def detect_emotion(text)
     # テキストから主要な感情を検出（改善版）
     emotion_patterns = {
-      "喜び" => ["嬉しい", "楽しい", "幸せ", "ワクワク", "最高", "良かった", "素晴らしい"],
-      "悲しみ" => ["悲しい", "つらい", "寂しい", "切ない", "泣きたい", "落ち込む"],
-      "怒り" => ["怒", "腹立", "イライラ", "ムカつく", "許せない", "頭にくる"],
-      "不安" => ["不安", "心配", "怖い", "緊張", "ドキドキ", "落ち着かない"],
-      "期待" => ["期待", "楽しみ", "ワクワク", "待ち遠しい", "希望"],
-      "疲れ" => ["疲れ", "しんどい", "だるい", "眠い", "ヘトヘト"],
-      "満足" => ["満足", "充実", "達成", "やりがい", "スッキリ"]
+      "喜び" => [ "嬉しい", "楽しい", "幸せ", "ワクワク", "最高", "良かった", "素晴らしい" ],
+      "悲しみ" => [ "悲しい", "つらい", "寂しい", "切ない", "泣きたい", "落ち込む" ],
+      "怒り" => [ "怒", "腹立", "イライラ", "ムカつく", "許せない", "頭にくる" ],
+      "不安" => [ "不安", "心配", "怖い", "緊張", "ドキドキ", "落ち着かない" ],
+      "期待" => [ "期待", "楽しみ", "ワクワク", "待ち遠しい", "希望" ],
+      "疲れ" => [ "疲れ", "しんどい", "だるい", "眠い", "ヘトヘト" ],
+      "満足" => [ "満足", "充実", "達成", "やりがい", "スッキリ" ]
     }
 
     # 各感情パターンをチェック
@@ -363,15 +391,15 @@ class ReportService
     emotions = []
 
     emotion_patterns = {
-      "喜び" => ["嬉しい", "楽しい", "幸せ", "ワクワク", "最高", "良かった", "素晴らしい", "よかった"],
-      "悲しみ" => ["悲しい", "つらい", "寂しい", "切ない", "泣きたい", "落ち込む", "悲しく"],
-      "怒り" => ["怒", "腹立", "イライラ", "ムカつく", "許せない", "頭にくる", "腹が立つ", "アホらしい"],
-      "不安" => ["不安", "心配", "怖い", "緊張", "ドキドキ", "落ち着かない", "心細い"],
-      "期待" => ["期待", "楽しみ", "ワクワク", "待ち遠しい", "希望", "チャンス"],
-      "疲れ" => ["疲れ", "しんどい", "だるい", "眠い", "ヘトヘト", "消耗", "疲弊"],
-      "満足" => ["満足", "充実", "達成", "やりがい", "スッキリ", "気持ちよい", "気持ちよかった"],
-      "孤独" => ["孤独", "一人", "寂しい", "ポツン", "孤立"],
-      "ストレス" => ["ストレス", "プレッシャー", "重圧", "負担", "圧力", "キツい"]
+      "喜び" => [ "嬉しい", "楽しい", "幸せ", "ワクワク", "最高", "良かった", "素晴らしい", "よかった" ],
+      "悲しみ" => [ "悲しい", "つらい", "寂しい", "切ない", "泣きたい", "落ち込む", "悲しく" ],
+      "怒り" => [ "怒", "腹立", "イライラ", "ムカつく", "許せない", "頭にくる", "腹が立つ", "アホらしい" ],
+      "不安" => [ "不安", "心配", "怖い", "緊張", "ドキドキ", "落ち着かない", "心細い" ],
+      "期待" => [ "期待", "楽しみ", "ワクワク", "待ち遠しい", "希望", "チャンス" ],
+      "疲れ" => [ "疲れ", "しんどい", "だるい", "眠い", "ヘトヘト", "消耗", "疲弊" ],
+      "満足" => [ "満足", "充実", "達成", "やりがい", "スッキリ", "気持ちよい", "気持ちよかった" ],
+      "孤独" => [ "孤独", "一人", "寂しい", "ポツン", "孤立" ],
+      "ストレス" => [ "ストレス", "プレッシャー", "重圧", "負担", "圧力", "キツい" ]
     }
 
     # 各感情パターンをチェック
@@ -382,7 +410,7 @@ class ReportService
     end
 
     # 感情が検出されなかった場合、デフォルトを返す
-    emotions.empty? ? ["その他"] : emotions.uniq
+    emotions.empty? ? [ "その他" ] : emotions.uniq
   end
 
   # AI分析用のヘルパーメソッド
@@ -435,7 +463,7 @@ class ReportService
     while strengths.length < 3
       strengths << {
         id: SecureRandom.uuid,
-        title: ["向上心", "責任感", "柔軟性", "観察力", "計画性"].sample,
+        title: [ "向上心", "責任感", "柔軟性", "観察力", "計画性" ].sample,
         description: "日々の会話から、優れた資質が感じられます。"
       }
     end
@@ -483,7 +511,7 @@ class ReportService
     while patterns.length < 2
       patterns << {
         id: SecureRandom.uuid,
-        title: ["直感的思考", "分析的思考", "創造的思考"].sample,
+        title: [ "直感的思考", "分析的思考", "創造的思考" ].sample,
         description: "独自の視点で物事を捉える思考パターンです。"
       }
     end
@@ -606,23 +634,23 @@ class ReportService
   # AI分析メソッド
   def analyze_user_strengths_with_ai(messages)
     begin
-      prompt = build_analysis_prompt(messages, 'strengths')
+      prompt = build_analysis_prompt(messages, "strengths")
 
       ai_messages = [
-        { role: 'system', content: analysis_system_prompt },
-        { role: 'user', content: prompt }
+        { role: "system", content: analysis_system_prompt },
+        { role: "user", content: prompt }
       ]
 
       response = openai_service.chat(ai_messages, temperature: 0.7, max_tokens: 800)
-      parsed_response = parse_ai_response(response['content'])
+      parsed_response = parse_ai_response(response["content"])
 
       # 強みのフォーマットに変換
-      if parsed_response && parsed_response['strengths']
-        parsed_response['strengths'].map do |strength|
+      if parsed_response && parsed_response["strengths"]
+        parsed_response["strengths"].map do |strength|
           {
             id: SecureRandom.uuid,
-            title: strength['title'],
-            description: strength['description']
+            title: strength["title"],
+            description: strength["description"]
           }
         end.take(3)
       else
@@ -638,22 +666,22 @@ class ReportService
 
   def analyze_thinking_patterns_with_ai(messages)
     begin
-      prompt = build_analysis_prompt(messages, 'thinking_patterns')
+      prompt = build_analysis_prompt(messages, "thinking_patterns")
 
       ai_messages = [
-        { role: 'system', content: analysis_system_prompt },
-        { role: 'user', content: prompt }
+        { role: "system", content: analysis_system_prompt },
+        { role: "user", content: prompt }
       ]
 
       response = openai_service.chat(ai_messages, temperature: 0.7, max_tokens: 600)
-      parsed_response = parse_ai_response(response['content'])
+      parsed_response = parse_ai_response(response["content"])
 
-      if parsed_response && parsed_response['thinking_patterns']
-        parsed_response['thinking_patterns'].map do |pattern|
+      if parsed_response && parsed_response["thinking_patterns"]
+        parsed_response["thinking_patterns"].map do |pattern|
           {
             id: SecureRandom.uuid,
-            title: pattern['title'],
-            description: pattern['description']
+            title: pattern["title"],
+            description: pattern["description"]
           }
         end.take(2)
       else
@@ -667,22 +695,22 @@ class ReportService
 
   def analyze_user_values_with_ai(messages)
     begin
-      prompt = build_analysis_prompt(messages, 'values')
+      prompt = build_analysis_prompt(messages, "values")
 
       ai_messages = [
-        { role: 'system', content: analysis_system_prompt },
-        { role: 'user', content: prompt }
+        { role: "system", content: analysis_system_prompt },
+        { role: "user", content: prompt }
       ]
 
       response = openai_service.chat(ai_messages, temperature: 0.7, max_tokens: 800)
-      parsed_response = parse_ai_response(response['content'])
+      parsed_response = parse_ai_response(response["content"])
 
-      if parsed_response && parsed_response['values']
-        parsed_response['values'].map do |value|
+      if parsed_response && parsed_response["values"]
+        parsed_response["values"].map do |value|
           {
             id: SecureRandom.uuid,
-            title: value['title'],
-            description: value['description']
+            title: value["title"],
+            description: value["description"]
           }
         end.take(3)
       else
@@ -713,7 +741,7 @@ class ReportService
     messages_text = messages.take(20).join("\n---\n")
 
     case analysis_type
-    when 'strengths'
+    when "strengths"
       <<~PROMPT
         以下のユーザーの会話履歴を分析し、この人の「強み」を3つ特定してください。
         強みは、その人の能力、資質、潜在的な才能を表すものです。
@@ -733,7 +761,7 @@ class ReportService
 
         必ず3つの強みを含めてください。
       PROMPT
-    when 'thinking_patterns'
+    when "thinking_patterns"
       <<~PROMPT
         以下のユーザーの会話履歴を分析し、この人の「思考パターン」を2つ特定してください。
         思考パターンは、物事を考える際の特徴的な傾向や方法を表すものです。
@@ -753,7 +781,7 @@ class ReportService
 
         必ず2つの思考パターンを含めてください。
       PROMPT
-    when 'values'
+    when "values"
       <<~PROMPT
         以下のユーザーの会話履歴を分析し、この人の「価値観」を3つ特定してください。
         価値観は、その人が人生で大切にしているものや信念を表すものです。
@@ -789,5 +817,56 @@ class ReportService
     else
       nil
     end
+  end
+
+  # 現在の月次サマリーを取得または作成
+  def find_or_create_current_summary
+    Summary.find_or_create_by(
+      user_id: user.id,
+      period: "monthly",
+      tally_start_at: Time.current.beginning_of_month
+    ) do |summary|
+      summary.tally_end_at = Time.current.end_of_month
+      summary.analysis_data = {
+        strengths: [],
+        thinking_patterns: [],
+        values: [],
+        analyzed_at: nil
+      }
+    end
+  end
+
+  # 分析結果をsummariesテーブルに保存
+  def save_analysis_to_summary(analysis)
+    summary = find_or_create_current_summary
+
+    summary.update!(
+      analysis_data: {
+        strengths: analysis[:strengths],
+        thinking_patterns: analysis[:thinkingPatterns],
+        values: analysis[:values],
+        conversation_report: analysis[:conversationReport],
+        analyzed_at: Time.current
+      }
+    )
+  end
+
+  # 既存の分析結果をパース
+  def parse_existing_analysis(summary)
+    data = summary.analysis_data || {}
+
+    {
+      userId: user.id.to_s,
+      userName: user.name,
+      strengths: data["strengths"] || [],
+      thinkingPatterns: data["thinking_patterns"] || [],
+      values: data["values"] || [],
+      conversationReport: data["conversation_report"] || {
+        week: generate_weekly_conversation_report,
+        month: generate_monthly_conversation_report
+      },
+      updatedAt: summary.updated_at.iso8601,
+      analyzedAt: data["analyzed_at"]
+    }
   end
 end

@@ -18,10 +18,20 @@ class ReportService {
   }
 
   /**
-   * ユーザーのレポートデータを取得
+   * ユーザーのレポートデータを取得（分析必要性チェック付き）
    */
-  async getReport(): Promise<UserReport> {
+  async getReport(): Promise<UserReport | { needsAnalysis: boolean; existingData: UserReport | null; lastAnalyzedAt: string; message: string }> {
     const response = await axios.get(`${API_BASE_URL}/api/v1/report`, {
+      headers: this.getHeaders()
+    });
+    return response.data;
+  }
+
+  /**
+   * AI分析を手動実行
+   */
+  async executeAnalysis(): Promise<UserReport> {
+    const response = await axios.post(`${API_BASE_URL}/api/v1/report/analyze`, {}, {
       headers: this.getHeaders()
     });
     return response.data;

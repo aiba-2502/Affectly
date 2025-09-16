@@ -31,6 +31,12 @@ export default function ReportPage() {
   const [reportData, setReportData] = useState<UserReport | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [showLive2D, setShowLive2D] = useState(false);
+  const [needsAnalysis, setNeedsAnalysis] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
+  const [analysisMessage, setAnalysisMessage] = useState('');
+  const [lastExecutionTime, setLastExecutionTime] = useState<Date | null>(null);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -56,10 +62,38 @@ export default function ReportPage() {
     }
   }, [user]);
 
+  // クールダウンタイマー
+  useEffect(() => {
+    if (!lastExecutionTime) return;
+
+    const updateCooldown = () => {
+      const elapsed = Date.now() - lastExecutionTime.getTime();
+      const remaining = Math.max(0, 60000 - elapsed); // 60秒 = 60000ms
+      setCooldownRemaining(Math.ceil(remaining / 1000)); // 秒単位に変換
+
+      if (remaining > 0) {
+        return true; // 継続
+      }
+      return false; // 終了
+    };
+
+    // 初回更新
+    if (!updateCooldown()) return;
+
+    // 1秒ごとに更新
+    const interval = setInterval(() => {
+      if (!updateCooldown()) {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lastExecutionTime]);
+
   const fetchReportData = async () => {
     try {
       setIsLoadingData(true);
-      console.log('AI分析を開始します...');
+      console.log('レポートデータを取得中...');
 
       // トークンをセット
       const token = localStorage.getItem('token');
@@ -67,20 +101,58 @@ export default function ReportPage() {
         reportService.setToken(token);
       }
 
-      // APIからレポートデータを取得（AI分析実行）
-      console.log('AIがあなたの会話履歴を分析中です...');
+      // APIからレポートデータを取得（分析必要性チェック付き）
+      const response = await reportService.getReport();
+
+      // needsAnalysisプロパティが存在する場合は分析が必要
+      if ('needsAnalysis' in response && response.needsAnalysis) {
+        setNeedsAnalysis(true);
+        setLastAnalyzedAt(response.lastAnalyzedAt);
+        setAnalysisMessage(response.message);
+        // 既存データがあれば表示
+        if (response.existingData) {
+          setReportData(response.existingData);
+        }
+      } else {
+        // 通常のレポートデータ
+        setReportData(response as UserReport);
+        setNeedsAnalysis(false);
+      }
+    } catch (error) {
+      console.error('レポートデータの取得に失敗しました:', error);
+      setReportData(null);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  // AI分析を手動実行
+  const handleExecuteAnalysis = async () => {
+    // クールダウンチェック
+    if (cooldownRemaining > 0) {
+      alert(`分析は${cooldownRemaining}秒後に実行可能になります。`);
+      return;
+    }
+
+    try {
+      setIsAnalyzing(true);
+      console.log('AI分析を開始します...');
+
       const startTime = Date.now();
-      const data = await reportService.getReport();
+      const data = await reportService.executeAnalysis();
       const endTime = Date.now();
       console.log(`AI分析が完了しました（${(endTime - startTime) / 1000}秒）`);
 
       setReportData(data);
+      setNeedsAnalysis(false);
+      setLastAnalyzedAt(new Date().toISOString());
+      setLastExecutionTime(new Date()); // 実行時刻を記録
+      setCooldownRemaining(60); // 60秒のクールダウン開始
     } catch (error) {
-      console.error('レポートデータの取得に失敗しました:', error);
-      // エラー時はnullを設定（分析結果なしの表示）
-      setReportData(null);
+      console.error('AI分析に失敗しました:', error);
+      alert('分析に失敗しました。しばらくしてから再試行してください。');
     } finally {
-      setIsLoadingData(false);
+      setIsAnalyzing(false);
     }
   };
 
@@ -106,6 +178,52 @@ export default function ReportPage() {
           <h1 className="text-lg font-semibold text-gray-900">レポート</h1>
         </div>
       </div>
+
+      {/* 分析可能通知バナー */}
+      {needsAnalysis && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-sm text-blue-900 font-medium">{analysisMessage}</p>
+              {lastAnalyzedAt && (
+                <p className="text-xs text-blue-700 mt-1">
+                  最終分析: {new Date(lastAnalyzedAt).toLocaleString('ja-JP')}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center space-x-3">
+              {cooldownRemaining > 0 && (
+                <div className="text-sm text-blue-700">
+                  <span className="font-medium">{cooldownRemaining}秒</span>後に再実行可能
+                </div>
+              )}
+              <button
+                onClick={handleExecuteAnalysis}
+                disabled={isAnalyzing || cooldownRemaining > 0}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  isAnalyzing || cooldownRemaining > 0
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                {isAnalyzing ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    AI分析中...
+                  </span>
+                ) : cooldownRemaining > 0 ? (
+                  `待機中 (${cooldownRemaining}秒)`
+                ) : (
+                  'AI分析を実行'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content - 左右分割レイアウト */}
       <div className="flex-1 flex relative overflow-hidden">

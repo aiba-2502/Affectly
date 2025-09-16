@@ -36,6 +36,7 @@ Rails.application.routes.draw do
 
       # Report routes
       get 'report', to: 'reports#show'
+      post 'report/analyze', to: 'reports#analyze'
       get 'report/weekly', to: 'reports#weekly'
       get 'report/monthly', to: 'reports#monthly'
     end
