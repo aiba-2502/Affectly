@@ -1,8 +1,9 @@
 class ReportService
-  attr_reader :user
+  attr_reader :user, :openai_service
 
   def initialize(user)
     @user = user
+    @openai_service = OpenaiService.new
   end
 
   def generate_report
@@ -35,11 +36,11 @@ class ReportService
     recent_messages = user.chat_messages
                          .where(role: 'user')
                          .where("created_at >= ?", 1.month.ago)
+                         .limit(20)
                          .pluck(:content)
-                         .join(" ")
 
     if recent_messages.present?
-      analyze_user_strengths(recent_messages)
+      analyze_user_strengths_with_ai(recent_messages)
     else
       # デフォルトの強み
       [
@@ -55,11 +56,11 @@ class ReportService
     recent_messages = user.chat_messages
                          .where(role: 'user')
                          .where("created_at >= ?", 1.month.ago)
+                         .limit(20)
                          .pluck(:content)
-                         .join(" ")
 
     if recent_messages.present?
-      analyze_thinking_patterns(recent_messages)
+      analyze_thinking_patterns_with_ai(recent_messages)
     else
       # デフォルトの思考パターン
       [
@@ -74,12 +75,18 @@ class ReportService
     recent_messages = user.chat_messages
                          .where(role: 'user')
                          .where("created_at >= ?", 1.month.ago)
+                         .limit(20)
                          .pluck(:content)
-                         .join(" ")
+
+    Rails.logger.info "Generating values for user #{user.id}"
+    Rails.logger.info "Recent messages count: #{recent_messages.length}"
 
     if recent_messages.present?
-      analyze_user_values(recent_messages)
+      values = analyze_user_values_with_ai(recent_messages)
+      Rails.logger.info "Generated #{values.length} values"
+      values
     else
+      Rails.logger.info "No recent messages, using default values"
       # デフォルトの価値観
       [
         { id: SecureRandom.uuid, title: "自己理解", description: "自分自身を深く理解することを大切にしています。" },
@@ -488,7 +495,8 @@ class ReportService
     # テキストから価値観を分析
     values = []
 
-    if text.match?(/成長|学ぶ|勉強|スキル|向上/)
+    # 成長・学習関連
+    if text.match?(/成長|学ぶ|学び|学習|勉強|スキル|向上|教|試|チャレンジ|レベル|開発|知識|経験|変化|進化|改善|できる|身に付|習得|マスター/)
       values << {
         id: SecureRandom.uuid,
         title: "成長",
@@ -496,7 +504,8 @@ class ReportService
       }
     end
 
-    if text.match?(/家族|友人|仲間|大切な人|つながり/)
+    # 人間関係
+    if text.match?(/家族|友人|友達|仲間|大切な人|つながり|人|コミュニ|会話|話|相談|関係|感謝|ありがとう|優し|思いやり|信頼|愛|理解|共感|協力|チーム/)
       values << {
         id: SecureRandom.uuid,
         title: "人間関係",
@@ -504,7 +513,8 @@ class ReportService
       }
     end
 
-    if text.match?(/自由|自分らしく|個性|独立|自己/)
+    # 自律性・自分らしさ
+    if text.match?(/自由|自分らし|自分|個性|独立|自己|主体|自信|信念|意志|決断|選択|責任|感情|気持ち|心|本当|素直|正直/)
       values << {
         id: SecureRandom.uuid,
         title: "自律性",
@@ -512,7 +522,8 @@ class ReportService
       }
     end
 
-    if text.match?(/社会|貢献|役立つ|助ける|サポート/)
+    # 貢献・サポート
+    if text.match?(/社会|貢献|役立|助け|サポート|仕事|プロジェクト|意味|価値|目的|目標|ミッション|ビジョン|影響|インパクト|世界|未来/)
       values << {
         id: SecureRandom.uuid,
         title: "貢献",
@@ -520,7 +531,8 @@ class ReportService
       }
     end
 
-    if text.match?(/バランス|調和|健康|ゆとり|充実/)
+    # バランス・調和
+    if text.match?(/バランス|調和|健康|休|リラックス|リフレッシュ|ゆとり|充実|幸せ|幸福|満足|安心|安定|穏やか|平和|楽し|エンジョイ|笑|ストレス|リセット/)
       values << {
         id: SecureRandom.uuid,
         title: "調和",
@@ -528,15 +540,254 @@ class ReportService
       }
     end
 
-    # 最低2つは返す
-    while values.length < 2
+    # 創造性・興味
+    if text.match?(/創造|アイデア|アイディア|クリエイ|デザイン|芸術|アート|音楽|本|読書|映画|ゲーム|趣味|好き|興味|関心|面白|おもしろ|新し|オリジナル|ユニーク/)
       values << {
         id: SecureRandom.uuid,
-        title: ["誠実さ", "創造性", "安定", "挑戦"].sample,
-        description: "人生において大切にしている価値観です。"
+        title: "創造性",
+        description: "創造的な活動や新しいものを生み出すことを大切にしています。"
       }
     end
 
-    values.take(2)
+    # 誠実さ・正義
+    if text.match?(/誠実|正直|正義|公平|公正|真実|ルール|マナー|約束|守る|正し|間違|エシカル|倫理|道徳/)
+      values << {
+        id: SecureRandom.uuid,
+        title: "誠実さ",
+        description: "誠実さと正義を大切にしています。"
+      }
+    end
+
+    # 挑戦・冒険
+    if text.match?(/挑戦|チャレンジ|冒険|リスク|新しいこと|トライ|チャンス|機会|可能性|ポテンシャル|限界|超え|突破/)
+      values << {
+        id: SecureRandom.uuid,
+        title: "挑戦",
+        description: "新しい挑戦や冒険を大切にしています。"
+      }
+    end
+
+    # 安定・安全
+    if text.match?(/安定|安全|安心|保守|計画|プラン|準備|リスク管理|予防|注意|慎重|確実|着実|堅実/)
+      values << {
+        id: SecureRandom.uuid,
+        title: "安定",
+        description: "安定した生活や確実性を大切にしています。"
+      }
+    end
+
+    # 最低2つは返す（より多様なデフォルト価値観を用意）
+    default_values = [
+      { title: "誠実さ", description: "正直で誠実な姿勢を大切にしています。" },
+      { title: "創造性", description: "新しいアイデアや発想を大切にしています。" },
+      { title: "安定", description: "安定した環境と着実な成果を重視しています。" },
+      { title: "挑戦", description: "新しいチャレンジを恐れない姿勢を持っています。" },
+      { title: "思いやり", description: "他者への配慮と思いやりを大切にしています。" },
+      { title: "自己実現", description: "自分の可能性を最大限に発揮することを目指しています。" },
+      { title: "柔軟性", description: "状況に応じて柔軟に対応することを大切にしています。" },
+      { title: "責任感", description: "自分の行動に責任を持つことを重視しています。" }
+    ]
+
+    # ランダムに選んで追加
+    while values.length < 2
+      selected = default_values.sample
+      unless values.any? { |v| v[:title] == selected[:title] }
+        values << {
+          id: SecureRandom.uuid,
+          title: selected[:title],
+          description: selected[:description]
+        }
+      end
+    end
+
+    values.take(3) # 最大3つの価値観を返す
+  end
+
+  # AI分析メソッド
+  def analyze_user_strengths_with_ai(messages)
+    begin
+      prompt = build_analysis_prompt(messages, 'strengths')
+
+      ai_messages = [
+        { role: 'system', content: analysis_system_prompt },
+        { role: 'user', content: prompt }
+      ]
+
+      response = openai_service.chat(ai_messages, temperature: 0.7, max_tokens: 800)
+      parsed_response = parse_ai_response(response['content'])
+
+      # 強みのフォーマットに変換
+      if parsed_response && parsed_response['strengths']
+        parsed_response['strengths'].map do |strength|
+          {
+            id: SecureRandom.uuid,
+            title: strength['title'],
+            description: strength['description']
+          }
+        end.take(3)
+      else
+        # フォールバック
+        analyze_user_strengths(messages.join(" "))
+      end
+    rescue => e
+      Rails.logger.error "AI analysis error for strengths: #{e.message}"
+      # フォールバック：従来のキーワードベース分析
+      analyze_user_strengths(messages.join(" "))
+    end
+  end
+
+  def analyze_thinking_patterns_with_ai(messages)
+    begin
+      prompt = build_analysis_prompt(messages, 'thinking_patterns')
+
+      ai_messages = [
+        { role: 'system', content: analysis_system_prompt },
+        { role: 'user', content: prompt }
+      ]
+
+      response = openai_service.chat(ai_messages, temperature: 0.7, max_tokens: 600)
+      parsed_response = parse_ai_response(response['content'])
+
+      if parsed_response && parsed_response['thinking_patterns']
+        parsed_response['thinking_patterns'].map do |pattern|
+          {
+            id: SecureRandom.uuid,
+            title: pattern['title'],
+            description: pattern['description']
+          }
+        end.take(2)
+      else
+        analyze_thinking_patterns(messages.join(" "))
+      end
+    rescue => e
+      Rails.logger.error "AI analysis error for thinking patterns: #{e.message}"
+      analyze_thinking_patterns(messages.join(" "))
+    end
+  end
+
+  def analyze_user_values_with_ai(messages)
+    begin
+      prompt = build_analysis_prompt(messages, 'values')
+
+      ai_messages = [
+        { role: 'system', content: analysis_system_prompt },
+        { role: 'user', content: prompt }
+      ]
+
+      response = openai_service.chat(ai_messages, temperature: 0.7, max_tokens: 800)
+      parsed_response = parse_ai_response(response['content'])
+
+      if parsed_response && parsed_response['values']
+        parsed_response['values'].map do |value|
+          {
+            id: SecureRandom.uuid,
+            title: value['title'],
+            description: value['description']
+          }
+        end.take(3)
+      else
+        analyze_user_values(messages.join(" "))
+      end
+    rescue => e
+      Rails.logger.error "AI analysis error for values: #{e.message}"
+      analyze_user_values(messages.join(" "))
+    end
+  end
+
+  def analysis_system_prompt
+    <<~PROMPT
+      あなたはユーザーの会話履歴を分析し、その人の特性を深く理解する心理分析の専門家です。
+      ユーザーの発言から、その人固有の強み、思考パターン、価値観を見出してください。
+
+      分析の際は以下の点に注意してください：
+      1. 表面的な内容だけでなく、言葉の選び方や表現方法から深層心理を読み取る
+      2. 一般的な特性ではなく、そのユーザー特有の個性を見つける
+      3. ポジティブで建設的な表現を使用する
+      4. 具体的で実践的な内容にする
+
+      必ずJSON形式で回答してください。
+    PROMPT
+  end
+
+  def build_analysis_prompt(messages, analysis_type)
+    messages_text = messages.take(20).join("\n---\n")
+
+    case analysis_type
+    when 'strengths'
+      <<~PROMPT
+        以下のユーザーの会話履歴を分析し、この人の「強み」を3つ特定してください。
+        強みは、その人の能力、資質、潜在的な才能を表すものです。
+
+        会話履歴：
+        #{messages_text}
+
+        以下のJSON形式で回答してください：
+        {
+          "strengths": [
+            {
+              "title": "強みのタイトル（10文字以内）",
+              "description": "その強みの詳細な説明（50文字以内）"
+            }
+          ]
+        }
+
+        必ず3つの強みを含めてください。
+      PROMPT
+    when 'thinking_patterns'
+      <<~PROMPT
+        以下のユーザーの会話履歴を分析し、この人の「思考パターン」を2つ特定してください。
+        思考パターンは、物事を考える際の特徴的な傾向や方法を表すものです。
+
+        会話履歴：
+        #{messages_text}
+
+        以下のJSON形式で回答してください：
+        {
+          "thinking_patterns": [
+            {
+              "title": "思考パターンのタイトル（10文字以内）",
+              "description": "その思考パターンの詳細な説明（50文字以内）"
+            }
+          ]
+        }
+
+        必ず2つの思考パターンを含めてください。
+      PROMPT
+    when 'values'
+      <<~PROMPT
+        以下のユーザーの会話履歴を分析し、この人の「価値観」を3つ特定してください。
+        価値観は、その人が人生で大切にしているものや信念を表すものです。
+
+        会話履歴：
+        #{messages_text}
+
+        以下のJSON形式で回答してください：
+        {
+          "values": [
+            {
+              "title": "価値観のタイトル（10文字以内）",
+              "description": "その価値観の詳細な説明（50文字以内）"
+            }
+          ]
+        }
+
+        必ず3つの価値観を含めてください。
+      PROMPT
+    end
+  end
+
+  def parse_ai_response(content)
+    # JSONを抽出して解析
+    json_match = content.match(/\{.*\}/m)
+    if json_match
+      begin
+        JSON.parse(json_match[0])
+      rescue JSON::ParserError => e
+        Rails.logger.error "JSON parse error: #{e.message}"
+        nil
+      end
+    else
+      nil
+    end
   end
 end
