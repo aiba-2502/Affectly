@@ -140,8 +140,8 @@ export const ChatContainer: React.FC = () => {
 
   return (
     <>
-      {/* Live2D Character - 背景として表示 */}
-      {showLive2D && <Live2DComponent />}
+      {/* Live2D Character - 背景として表示（チャット画面用モデル） */}
+      {showLive2D && <Live2DComponent screenType="chat" />}
       
       {/* チャット画面 - ChatGPT風 */}
       <div className="flex flex-col h-full relative z-10">

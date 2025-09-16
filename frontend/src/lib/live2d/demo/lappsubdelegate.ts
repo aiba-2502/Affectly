@@ -27,6 +27,7 @@ export class LAppSubdelegate {
     this._view = new LAppView();
     this._frameBuffer = null;
     this._captured = false;
+    this._disableMotions = false;
   }
 
   /**
@@ -244,6 +245,18 @@ export class LAppSubdelegate {
     return this._live2dManager;
   }
 
+  public setDisableMotions(disable: boolean): void {
+    this._disableMotions = disable;
+    // LAppLive2DManagerに伝播
+    if (this._live2dManager) {
+      this._live2dManager.setDisableMotions(disable);
+    }
+  }
+
+  public getDisableMotions(): boolean {
+    return this._disableMotions;
+  }
+
   /**
    * Resize the canvas to fill the screen.
    */
@@ -366,4 +379,5 @@ export class LAppSubdelegate {
   private _captured: boolean;
 
   private _needResize: boolean;
+  private _disableMotions: boolean;
 }

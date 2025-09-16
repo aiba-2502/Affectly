@@ -256,6 +256,10 @@ export class LAppDelegate {
     // Subdelegateを作成して初期化
     this._subdelegates.prepareCapacity(1);
     const subdelegate = new LAppSubdelegate();
+    // 動作無効化フラグを伝達
+    if (this._disableMotions) {
+      (subdelegate as any).setDisableMotions(true);
+    }
     if (subdelegate.initialize(canvas)) {
       this._subdelegates.pushBack(subdelegate);
     } else {
@@ -336,6 +340,10 @@ export class LAppDelegate {
 
     for (let i = 0; i < this._canvases.getSize(); i++) {
       const subdelegate = new LAppSubdelegate();
+    // 動作無効化フラグを伝達
+    if (this._disableMotions) {
+      (subdelegate as any).setDisableMotions(true);
+    }
       subdelegate.initialize(this._canvases.at(i));
       this._subdelegates.pushBack(subdelegate);
     }
@@ -358,6 +366,21 @@ export class LAppDelegate {
     this._canvases = new csmVector<HTMLCanvasElement>();
     this._isRunning = false;
     this._animationFrameId = null;
+    this._disableMotions = false; // 動作無効化フラグ
+  }
+
+  /**
+   * 動作無効化フラグを設定
+   */
+  public setDisableMotions(disable: boolean): void {
+    this._disableMotions = disable;
+  }
+
+  /**
+   * 動作無効化フラグを取得
+   */
+  public getDisableMotions(): boolean {
+    return this._disableMotions;
   }
 
   /**
@@ -384,6 +407,11 @@ export class LAppDelegate {
    * requestAnimationFrameのID
    */
   private _animationFrameId: number | null;
+
+  /**
+   * 動作無効化フラグ
+   */
+  private _disableMotions: boolean;
 
   /**
    * リスナー関数

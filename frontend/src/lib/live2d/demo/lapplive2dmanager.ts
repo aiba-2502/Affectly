@@ -10,7 +10,8 @@ import { ACubismMotion } from '../framework/motion/acubismmotion';
 import { csmVector } from '../framework/type/csmvector';
 
 import * as LAppDefine from './lappdefine';
-import { LAppModel } from './lappmodel';
+import { LAppModel, LAppModelFactory, ScreenType } from './lappmodel';
+import { LAppModelBase } from './lappmodelbase';
 import { LAppPal } from './lapppal';
 import { LAppSubdelegate } from './lappsubdelegate';
 
@@ -144,6 +145,10 @@ export class LAppLive2DManager {
 
     const instance = new LAppModel();
     instance.setSubdelegate(this._subdelegate);
+    // disableMotionsフラグを新しいモデルに設定
+    if (this._disableMotions) {
+      instance.setDisableMotions(this._disableMotions);
+    }
     instance.loadAssets(modelPath, modelJsonName);
     this._models.pushBack(instance);
 
@@ -225,6 +230,21 @@ export class LAppLive2DManager {
     return this._models.at(index);
   }
 
+  public setDisableMotions(disable: boolean): void {
+    this._disableMotions = disable;
+    // 全モデルに伝播
+    for (let i = 0; i < this._models.getSize(); i++) {
+      const model = this._models.at(i);
+      if (model) {
+        model.setDisableMotions(disable);
+      }
+    }
+  }
+
+  public getDisableMotions(): boolean {
+    return this._disableMotions;
+  }
+
   /**
    * 自身が所属するSubdelegate
    */
@@ -233,6 +253,7 @@ export class LAppLive2DManager {
   _viewMatrix: CubismMatrix44; // モデル描画に用いるview行列
   _models: csmVector<LAppModel>; // モデルインスタンスのコンテナ
   private _sceneIndex: number; // 表示するシーンのインデックス値
+  private _disableMotions: boolean = false;
 
   // モーション再生開始のコールバック関数
   beganMotion = (self: ACubismMotion): void => {

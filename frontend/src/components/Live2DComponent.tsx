@@ -1,9 +1,16 @@
 'use client';
 
 import { LAppDelegate } from '@/lib/live2d/demo/lappdelegate';
+import { ScreenType } from '@/lib/live2d/demo/lappmodel';
 import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
-const Live2DComponent = () => {
+interface Live2DComponentProps {
+  disableMotions?: boolean; // 動作を無効化するフラグ（後方互換性のため残す）
+  screenType?: ScreenType | string; // 画面タイプを明示的に指定（文字列も受け付ける）
+}
+
+const Live2DComponent = ({ disableMotions = false, screenType }: Live2DComponentProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const delegateRef = useRef<LAppDelegate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,6 +58,10 @@ const Live2DComponent = () => {
         if (canvasRef.current) {
           // LAppDelegateのインスタンスを取得して、キャンバスで初期化
           const appDelegateInstance = LAppDelegate.getInstance();
+          // 動作無効化フラグを設定
+          if (disableMotions) {
+            (appDelegateInstance as any).setDisableMotions(true);
+          }
           if (appDelegateInstance.initializeWithCanvas(canvasRef.current)) {
             appDelegateInstance.run();
             delegateRef.current = appDelegateInstance;
