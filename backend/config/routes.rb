@@ -33,6 +33,11 @@ Rails.application.routes.draw do
 
       # Voice routes
       post 'voices/generate', to: 'voices#generate'
+
+      # Report routes
+      get 'report', to: 'reports#show'
+      get 'report/weekly', to: 'reports#weekly'
+      get 'report/monthly', to: 'reports#monthly'
     end
   end
 end

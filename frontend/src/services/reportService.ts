@@ -1,0 +1,52 @@
+import axios from 'axios';
+import { UserReport } from '@/types/report';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+class ReportService {
+  private token: string | null = null;
+
+  setToken(token: string) {
+    this.token = token;
+  }
+
+  private getHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      ...(this.token && { Authorization: `Bearer ${this.token}` })
+    };
+  }
+
+  /**
+   * ユーザーのレポートデータを取得
+   */
+  async getReport(): Promise<UserReport> {
+    const response = await axios.get(`${API_BASE_URL}/api/v1/report`, {
+      headers: this.getHeaders()
+    });
+    return response.data;
+  }
+
+  /**
+   * 週次レポートデータを取得
+   */
+  async getWeeklyReport() {
+    const response = await axios.get(`${API_BASE_URL}/api/v1/report/weekly`, {
+      headers: this.getHeaders()
+    });
+    return response.data;
+  }
+
+  /**
+   * 月次レポートデータを取得
+   */
+  async getMonthlyReport() {
+    const response = await axios.get(`${API_BASE_URL}/api/v1/report/monthly`, {
+      headers: this.getHeaders()
+    });
+    return response.data;
+  }
+}
+
+const reportService = new ReportService();
+export default reportService;
