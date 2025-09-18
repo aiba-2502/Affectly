@@ -101,10 +101,31 @@ class Summary < ApplicationRecord
 
   # 新規分析が必要かチェック
   def needs_new_analysis?
-    return true unless user
+    return false unless user
 
-    # 最後の分析以降に新規メッセージがあるか
-    user.chat_messages.where("created_at > ?", updated_at).exists?
+    # 全ユーザーメッセージ数（ユーザーとアシスタントの両方をカウント）
+    total_messages = user.chat_messages.count
+
+    # 分析済みのデータが存在するかチェック
+    analyzed_data_exists = analysis_data.present? && analysis_data["analyzed_at"].present?
+
+    if !analyzed_data_exists
+      # 初回分析の条件：10メッセージ（5ラリー）以上
+      return total_messages >= 10
+    else
+      # 前回分析以降の新規メッセージ数（ユーザーとアシスタントの両方をカウント）
+      new_messages = user.chat_messages.where("created_at > ?", analysis_data["analyzed_at"]).count
+      # 3ラリー（6メッセージ）以上で分析可能
+      return new_messages >= 6
+    end
+  end
+
+  # 前回分析からの新規メッセージ数を取得
+  def messages_since_analysis
+    return 0 unless user
+    return user.chat_messages.count unless analysis_data.present? && analysis_data["analyzed_at"].present?
+
+    user.chat_messages.where("created_at > ?", analysis_data["analyzed_at"]).count
   end
 
   # 最後の分析からの経過日数

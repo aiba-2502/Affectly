@@ -12,16 +12,23 @@ class ReportService
 
     # 新規メッセージがあるかチェック
     if existing_summary.needs_new_analysis?
+      # 前回分析からのメッセージ数を取得
+      messages_count = existing_summary.messages_since_analysis
+
       # 分析が必要であることを通知（既存データも返す）
       {
         needsAnalysis: true,
-        lastAnalyzedAt: existing_summary.updated_at,
+        lastAnalyzedAt: existing_summary.analysis_data["analyzed_at"] || existing_summary.updated_at,
         existingData: parse_existing_analysis(existing_summary),
-        message: "新しいメッセージが追加されました。AI分析を実行できます。"
+        message: "新しいメッセージが追加されました。AI分析を実行できます。",
+        messagesSinceAnalysis: messages_count
       }
     else
-      # 既存の分析結果を返す（API呼び出しなし）
-      parse_existing_analysis(existing_summary)
+      # 既存の分析結果を返す（分析不要の状態も返す）
+      result = parse_existing_analysis(existing_summary)
+      result[:needsAnalysis] = false
+      result[:lastAnalyzedAt] = existing_summary.analysis_data["analyzed_at"] || existing_summary.updated_at
+      result
     end
   end
 

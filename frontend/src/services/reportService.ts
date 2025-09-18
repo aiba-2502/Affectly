@@ -3,6 +3,21 @@ import { UserReport } from '@/types/report';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
+interface ReportResponseWithAnalysis {
+  needsAnalysis: true;
+  existingData: UserReport | null;
+  lastAnalyzedAt: string;
+  message: string;
+  messagesSinceAnalysis?: number;
+}
+
+interface ReportResponseWithoutAnalysis extends UserReport {
+  needsAnalysis: false;
+  lastAnalyzedAt: string;
+}
+
+type ReportResponse = ReportResponseWithAnalysis | ReportResponseWithoutAnalysis | UserReport;
+
 class ReportService {
   private token: string | null = null;
 
@@ -20,7 +35,7 @@ class ReportService {
   /**
    * ユーザーのレポートデータを取得（分析必要性チェック付き）
    */
-  async getReport(): Promise<UserReport | { needsAnalysis: boolean; existingData: UserReport | null; lastAnalyzedAt: string; message: string }> {
+  async getReport(): Promise<ReportResponse> {
     const response = await axios.get(`${API_BASE_URL}/api/v1/report`, {
       headers: this.getHeaders()
     });
