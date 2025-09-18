@@ -144,8 +144,8 @@ class ReportService
     if messages.present?
       analyze_personal_advice_with_ai(messages)
     else
-      # デフォルトのアドバイス
-      default_personal_advice
+      # メッセージがない場合はnilを返す
+      nil
     end
   end
 
@@ -766,7 +766,7 @@ class ReportService
     parse_personal_advice_response(response)
   rescue => e
     Rails.logger.error "Personal advice generation failed: #{e.message}"
-    default_personal_advice
+    nil
   end
 
   # パーソナルアドバイス用のプロンプト構築
@@ -843,7 +843,7 @@ class ReportService
     }
   rescue JSON::ParserError => e
     Rails.logger.error "Failed to parse personal advice JSON: #{e.message}"
-    default_personal_advice
+    nil
   end
 
   # デフォルトのパーソナルアドバイス
@@ -1009,7 +1009,7 @@ class ReportService
       strengths: data["strengths"] || [],
       thinkingPatterns: data["thinking_patterns"] || [],
       values: data["values"] || [],
-      personalAdvice: data["personal_advice"] || default_personal_advice,
+      personalAdvice: data["personal_advice"],
       conversationReport: data["conversation_report"] || {
         week: generate_weekly_conversation_report,
         month: generate_monthly_conversation_report
