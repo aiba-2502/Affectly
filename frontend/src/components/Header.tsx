@@ -1,19 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 export default function Header() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const handleLogout = async () => {
-    await logout();
-    router.push('/login');
-  };
 
   if (!user) {
     return null;
@@ -41,16 +36,10 @@ export default function Header() {
             </Link>
           </nav>
 
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center">
             <span className="text-sm text-gray-700">
               {user.name || user.email}
             </span>
-            <button
-              onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              ログアウト
-            </button>
           </div>
 
           {/* モバイルメニューボタン */}
@@ -96,12 +85,6 @@ export default function Header() {
                 <div className="px-3 py-2 text-sm text-gray-700">
                   {user.name || user.email}
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                >
-                  ログアウト
-                </button>
               </div>
             </div>
           </div>
