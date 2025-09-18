@@ -1,17 +1,17 @@
 class ApiTokenValidator
   # トークンチェーンの再利用検知
   def self.detect_token_reuse(api_token)
-    return false unless api_token.refresh? && api_token.chat_chain_id.present?
+    return false unless api_token.refresh? && api_token. token_family_id.present?
 
     # 同じチェーンIDで既に無効化されていないトークンが他に存在する場合
     reused_token = ApiToken.where(
-      chat_chain_id: api_token.chat_chain_id,
+       token_family_id: api_token. token_family_id,
       revoked_at: nil
     ).where.not(id: api_token.id).exists?
 
     if reused_token
       # セキュリティブリーチの可能性：チェーン全体を無効化
-      ApiToken.where(chat_chain_id: api_token.chat_chain_id)
+      ApiToken.where(token_family_id: api_token.token_family_id)
               .update_all(revoked_at: Time.current)
       return true
     end

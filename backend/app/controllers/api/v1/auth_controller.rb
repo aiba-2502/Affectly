@@ -44,42 +44,33 @@ module Api
           return render json: { error: "Refresh token required" }, status: :unauthorized
         end
 
-        # トークンを検索（無効化されたものも含む）
-        encrypted = ApiToken.encrypt_token(refresh_token_value)
-        refresh_token = ApiToken.find_by(encrypted_token: encrypted)
+        # リフレッシュトークンを検索
+        token_record = ApiToken.find_by_refresh_token(refresh_token_value)
 
-        # トークンが存在しない、またはリフレッシュトークンでない場合
-        if refresh_token.nil? || !refresh_token.refresh?
+        # トークンが存在しない場合
+        if token_record.nil?
           return render json: { error: "Invalid or expired refresh token" }, status: :unauthorized
         end
 
         # 既に無効化されているトークンの再利用を検知
-        if refresh_token.revoked_at.present?
+        if token_record.revoked_at.present?
           # セキュリティ：トークンチェーン全体を無効化
-          if refresh_token.chat_chain_id.present?
-            ApiToken.where(chat_chain_id: refresh_token.chat_chain_id)
+          if token_record.token_family_id.present?
+            ApiToken.where(token_family_id: token_record.token_family_id)
                     .update_all(revoked_at: Time.current)
           end
           return render json: { error: "Token reuse detected" }, status: :unauthorized
         end
 
         # トークンの有効期限チェック
-        if !refresh_token.token_valid?
+        if !token_record.refresh_valid?
           return render json: { error: "Invalid or expired refresh token" }, status: :unauthorized
         end
 
-        user = refresh_token.user
+        user = token_record.user
 
-        # 古いトークンを無効化
-        refresh_token.update!(revoked_at: Time.current)
-
-        # 新しいトークンペアを生成（同じチェーンIDを維持）
-        new_tokens = ApiToken.generate_token_pair(user)
-
-        # 新しいリフレッシュトークンに同じチェーンIDを設定
-        if refresh_token.chat_chain_id.present?
-          new_tokens[:refresh_token].update!(chat_chain_id: refresh_token.chat_chain_id)
-        end
+        # 同じレコードでトークンをローテーション
+        new_tokens = token_record.rotate_tokens!
 
         render json: {
           access_token: new_tokens[:access_token].raw_token,
@@ -104,11 +95,10 @@ module Api
         # アクセストークンを無効化
         access_token.update!(revoked_at: Time.current)
 
-        # 同じユーザーの関連するリフレッシュトークンも無効化
+        # 同じユーザーの全てのアクティブトークンを無効化
         if access_token.user_id.present?
           ApiToken.where(
             user_id: access_token.user_id,
-            token_kind: "refresh",
             revoked_at: nil
           ).update_all(revoked_at: Time.current)
         end

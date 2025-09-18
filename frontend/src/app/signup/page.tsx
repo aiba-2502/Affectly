@@ -45,7 +45,8 @@ export default function Signup() {
 
       if (response.ok) {
         // トークンをローカルストレージに保存
-        localStorage.setItem('token', data.token);
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
         localStorage.setItem('user', JSON.stringify(data.user));
         // AuthContextを更新
         await checkAuth();

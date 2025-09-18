@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_02_19_000000) do
+ActiveRecord::Schema[8.0].define(version: 2025_02_20_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -20,19 +20,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_19_000000) do
 
   create_table "api_tokens", force: :cascade do |t|
     t.bigint "user_id", null: false
-    t.string "encrypted_token", limit: 191, null: false
-    t.datetime "expires_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "token_kind", limit: 20, default: "access", null: false
-    t.string "chat_chain_id"
+    t.string "token_family_id"
     t.datetime "revoked_at"
-    t.index ["chat_chain_id", "created_at"], name: "idx_api_tokens_chain_created"
-    t.index ["chat_chain_id"], name: "index_api_tokens_on_chat_chain_id"
-    t.index ["encrypted_token"], name: "index_api_tokens_on_encrypted_token", unique: true
+    t.string "encrypted_access_token", limit: 191
+    t.string "encrypted_refresh_token", limit: 191
+    t.datetime "access_expires_at"
+    t.datetime "refresh_expires_at"
+    t.index ["encrypted_access_token"], name: "index_api_tokens_on_encrypted_access_token", unique: true
+    t.index ["encrypted_refresh_token"], name: "index_api_tokens_on_encrypted_refresh_token", unique: true
     t.index ["revoked_at"], name: "index_api_tokens_on_revoked_at"
-    t.index ["token_kind"], name: "index_api_tokens_on_token_kind"
-    t.index ["user_id", "token_kind", "revoked_at"], name: "idx_api_tokens_user_kind_revoked"
+    t.index ["token_family_id", "created_at"], name: "idx_api_tokens_chain_created"
+    t.index ["token_family_id"], name: "index_api_tokens_on_token_family_id"
     t.index ["user_id"], name: "index_api_tokens_on_user_id"
   end
 
