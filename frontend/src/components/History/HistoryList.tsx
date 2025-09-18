@@ -12,6 +12,7 @@ import {
   TrashIcon
 } from '@heroicons/react/24/outline';
 import { SearchBox } from './SearchBox';
+import { DeleteConfirmModal } from '../Modal/DeleteConfirmModal';
 
 interface SearchParams {
   keyword: string;
@@ -31,6 +32,9 @@ export const HistoryList: React.FC = () => {
     selectedEmotions: [],
   });
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
+  const [sessionPreview, setSessionPreview] = useState<string>('');
   const router = useRouter();
   const { setSessionId, setMessages } = useChatStore();
 
@@ -56,31 +60,45 @@ export const HistoryList: React.FC = () => {
     }
   };
 
-  const handleSessionDelete = async (sessionId: string, event: React.MouseEvent) => {
+  const handleSessionDelete = (sessionId: string, preview: string, event: React.MouseEvent) => {
     event.stopPropagation(); // 親のonClickイベントの伝播を防ぐ
+    setSessionToDelete(sessionId);
+    setSessionPreview(preview || 'チャット履歴');
+    setDeleteModalOpen(true);
+  };
 
-    if (!window.confirm('このチャット履歴を削除してもよろしいですか？\nこの操作は取り消せません。')) {
-      return;
-    }
+  const confirmDelete = async () => {
+    if (!sessionToDelete) return;
 
     try {
-      setDeletingSessionId(sessionId);
+      setDeletingSessionId(sessionToDelete);
       const token = localStorage.getItem('token');
       if (token) {
         chatApi.setToken(token);
-        await chatApi.deleteChatSession(sessionId);
+        await chatApi.deleteChatSession(sessionToDelete);
 
         // セッションリストから削除
         setSessions(prevSessions =>
-          prevSessions.filter(session => session.session_id !== sessionId)
+          prevSessions.filter(session => session.session_id !== sessionToDelete)
         );
+
+        // モーダルを閉じる
+        setDeleteModalOpen(false);
       }
     } catch (error) {
       console.error('Failed to delete session:', error);
       setError('チャット履歴の削除に失敗しました');
     } finally {
       setDeletingSessionId(null);
+      setSessionToDelete(null);
+      setSessionPreview('');
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteModalOpen(false);
+    setSessionToDelete(null);
+    setSessionPreview('');
   };
 
   const handleSessionClick = async (sessionId: string) => {
@@ -340,7 +358,7 @@ export const HistoryList: React.FC = () => {
 
           <div className="absolute top-4 right-4 flex items-center gap-2">
             <button
-              onClick={(e) => handleSessionDelete(session.session_id, e)}
+              onClick={(e) => handleSessionDelete(session.session_id, session.preview || '会話の内容がありません', e)}
               className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               disabled={deletingSessionId === session.session_id}
               title="削除"
@@ -357,6 +375,16 @@ export const HistoryList: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* 削除確認モーダル */}
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="チャット履歴の削除"
+        message={`「${sessionPreview.length > 50 ? sessionPreview.substring(0, 50) + '...' : sessionPreview}」を削除してもよろしいですか？`}
+        isDeleting={deletingSessionId !== null}
+      />
     </div>
   );
 };
