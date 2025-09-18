@@ -8,9 +8,11 @@ import { useChatStore } from '@/stores/chatStore';
 import {
   ChatBubbleLeftRightIcon,
   ClockIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 import { SearchBox } from './SearchBox';
+import { DeleteConfirmModal } from '../Modal/DeleteConfirmModal';
 
 interface SearchParams {
   keyword: string;
@@ -29,6 +31,10 @@ export const HistoryList: React.FC = () => {
     endDate: '',
     selectedEmotions: [],
   });
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
+  const [sessionPreview, setSessionPreview] = useState<string>('');
   const router = useRouter();
   const { setSessionId, setMessages } = useChatStore();
 
@@ -52,6 +58,47 @@ export const HistoryList: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSessionDelete = (sessionId: string, preview: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // 親のonClickイベントの伝播を防ぐ
+    setSessionToDelete(sessionId);
+    setSessionPreview(preview || 'チャット履歴');
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!sessionToDelete) return;
+
+    try {
+      setDeletingSessionId(sessionToDelete);
+      const token = localStorage.getItem('token');
+      if (token) {
+        chatApi.setToken(token);
+        await chatApi.deleteChatSession(sessionToDelete);
+
+        // セッションリストから削除
+        setSessions(prevSessions =>
+          prevSessions.filter(session => session.session_id !== sessionToDelete)
+        );
+
+        // モーダルを閉じる
+        setDeleteModalOpen(false);
+      }
+    } catch (error) {
+      console.error('Failed to delete session:', error);
+      setError('チャット履歴の削除に失敗しました');
+    } finally {
+      setDeletingSessionId(null);
+      setSessionToDelete(null);
+      setSessionPreview('');
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteModalOpen(false);
+    setSessionToDelete(null);
+    setSessionPreview('');
   };
 
   const handleSessionClick = async (sessionId: string) => {
@@ -261,55 +308,88 @@ export const HistoryList: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-[47rem] overflow-y-auto pr-2 scrollbar-thin">
           {filteredSessions.map((session) => (
-        <button
+        <div
           key={session.session_id}
-          onClick={() => handleSessionClick(session.session_id)}
-          className="w-full text-left bg-white hover:bg-gray-50 rounded-lg p-4 transition-colors border border-gray-200 hover:border-gray-300 group"
+          className="relative bg-white hover:bg-gray-50 rounded-lg p-4 transition-colors border border-gray-200 hover:border-gray-300 group"
         >
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
-                <ChatBubbleLeftRightIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <span className="text-xs text-gray-500">
-                  {session.message_count} メッセージ
-                </span>
-              </div>
-              
-              <p className="text-sm text-gray-800 line-clamp-2 mb-2">
-                {session.preview || '会話の内容がありません'}
-              </p>
-
-              {/* 感情タグ */}
-              {session.emotions && session.emotions.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {session.emotions.map((emotion, index) => (
-                    <span
-                      key={index}
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        getEmotionColor(emotion.name)
-                      }`}
-                      title={`強度: ${emotion.intensity}, 頻度: ${emotion.frequency || 1}`}
-                    >
-                      {emotion.label}
-                    </span>
-                  ))}
+          <button
+            onClick={() => handleSessionClick(session.session_id)}
+            className="w-full text-left focus:outline-none"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0 pr-20">
+                <div className="flex items-center gap-2 mb-2">
+                  <ChatBubbleLeftRightIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <span className="text-xs text-gray-500">
+                    {session.message_count} メッセージ
+                  </span>
                 </div>
-              )}
 
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <ClockIcon className="w-3 h-3" />
-                <span>{formatDate(session.last_message_at)}</span>
+                <p className="text-sm text-gray-800 line-clamp-2 mb-2">
+                  {session.preview || '会話の内容がありません'}
+                </p>
+
+                {/* 感情タグ */}
+                {session.emotions && session.emotions.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {session.emotions.map((emotion, index) => (
+                      <span
+                        key={index}
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          getEmotionColor(emotion.name)
+                        }`}
+                        title={`強度: ${emotion.intensity}, 頻度: ${emotion.frequency || 1}`}
+                      >
+                        {emotion.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <ClockIcon className="w-3 h-3" />
+                  <span>{formatDate(session.last_message_at)}</span>
+                </div>
               </div>
             </div>
-            
-            <ChevronRightIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600 flex-shrink-0 ml-2" />
+          </button>
+
+          {/* 右上の矢印アイコン */}
+          <div className="absolute top-4 right-4">
+            <ChevronRightIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
           </div>
-        </button>
+
+          {/* 右下の削除アイコン */}
+          <div className="absolute bottom-4 right-4">
+            <button
+              onClick={(e) => handleSessionDelete(session.session_id, session.preview || '会話の内容がありません', e)}
+              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              disabled={deletingSessionId === session.session_id}
+              title="削除"
+            >
+              {deletingSessionId === session.session_id ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+              ) : (
+                <TrashIcon className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        </div>
           ))}
         </div>
       )}
+
+      {/* 削除確認モーダル */}
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="チャット履歴の削除"
+        message={`「${sessionPreview.length > 50 ? sessionPreview.substring(0, 50) + '...' : sessionPreview}」を削除してもよろしいですか？`}
+        isDeleting={deletingSessionId !== null}
+      />
     </div>
   );
 };

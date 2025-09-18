@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'securerandom'
-require 'digest'
+require "securerandom"
+require "digest"
 
 class ApiToken < ApplicationRecord
   # Constants
@@ -20,16 +20,16 @@ class ApiToken < ApplicationRecord
   before_validation :set_expiry, on: :create
 
   # Scopes
-  scope :active, -> { where('expires_at IS NULL OR expires_at > ?', Time.current) }
-  scope :expired, -> { where('expires_at <= ?', Time.current) }
-  scope :expiring_soon, ->(days = 7) { 
-    where('expires_at BETWEEN ? AND ?', Time.current, days.days.from_now) 
+  scope :active, -> { where("expires_at IS NULL OR expires_at > ?", Time.current) }
+  scope :expired, -> { where("expires_at <= ?", Time.current) }
+  scope :expiring_soon, ->(days = 7) {
+    where("expires_at BETWEEN ? AND ?", Time.current, days.days.from_now)
   }
 
   # Class Methods
   def self.find_by_token(raw_token)
     return nil if raw_token.blank?
-    
+
     encrypted = encrypt_token(raw_token)
     active.find_by(encrypted_token: encrypted)
   end
@@ -37,7 +37,7 @@ class ApiToken < ApplicationRecord
   def self.authenticate(raw_token)
     token_record = find_by_token(raw_token)
     return nil unless token_record
-    
+
     token_record.user if token_record.active?
   end
 

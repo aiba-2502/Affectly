@@ -2,17 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
+import {
   HomeIcon,
-  ChatBubbleLeftRightIcon, 
-  ClockIcon, 
-  ChartBarIcon 
+  ChatBubbleLeftRightIcon,
+  ClockIcon,
+  DocumentChartBarIcon
 } from '@heroicons/react/24/outline';
-import { 
+import {
   HomeIcon as HomeIconSolid,
-  ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid, 
-  ClockIcon as ClockIconSolid, 
-  ChartBarIcon as ChartBarIconSolid 
+  ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid,
+  ClockIcon as ClockIconSolid,
+  DocumentChartBarIcon as DocumentChartBarIconSolid
 } from '@heroicons/react/24/solid';
 
 export default function BottomNav() {
@@ -40,8 +40,8 @@ export default function BottomNav() {
     {
       name: 'レポート',
       href: '/report',
-      icon: ChartBarIcon,
-      activeIcon: ChartBarIconSolid,
+      icon: DocumentChartBarIcon,
+      activeIcon: DocumentChartBarIconSolid,
     },
   ];
 

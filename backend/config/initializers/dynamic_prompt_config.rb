@@ -7,19 +7,19 @@ module DynamicPromptConfig
   CONVERSATION_STAGES = {
     initial: {
       range: (0..2),
-      description: '初期段階：理解と共感を重視'
+      description: "初期段階：理解と共感を重視"
     },
     exploring: {
       range: (3..5),
-      description: '探索段階：適度な深掘り'
+      description: "探索段階：適度な深掘り"
     },
     deepening: {
       range: (6..8),
-      description: '深化段階：整理とまとめ'
+      description: "深化段階：整理とまとめ"
     },
     concluding: {
       range: (9..),
-      description: '終結段階：自然な締めくくり'
+      description: "終結段階：自然な締めくくり"
     }
   }.freeze
 

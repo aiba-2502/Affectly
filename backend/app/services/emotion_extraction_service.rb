@@ -1,26 +1,26 @@
 class EmotionExtractionService
   # 感情カテゴリーの定義
   EMOTION_CATEGORIES = {
-    joy: '喜び',
-    sadness: '悲しみ',
-    anger: '怒り',
-    fear: '恐れ',
-    surprise: '驚き',
-    disgust: '嫌悪',
-    trust: '信頼',
-    anticipation: '期待',
-    love: '愛',
-    anxiety: '不安',
-    frustration: 'イライラ',
-    relief: '安心',
-    gratitude: '感謝',
-    pride: '誇り',
-    guilt: '罪悪感',
-    shame: '恥',
-    hope: '希望',
-    disappointment: '失望',
-    contentment: '満足',
-    loneliness: '孤独'
+    joy: "喜び",
+    sadness: "悲しみ",
+    anger: "怒り",
+    fear: "恐れ",
+    surprise: "驚き",
+    disgust: "嫌悪",
+    trust: "信頼",
+    anticipation: "期待",
+    love: "愛",
+    anxiety: "不安",
+    frustration: "イライラ",
+    relief: "安心",
+    gratitude: "感謝",
+    pride: "誇り",
+    guilt: "罪悪感",
+    shame: "恥",
+    hope: "希望",
+    disappointment: "失望",
+    contentment: "満足",
+    loneliness: "孤独"
   }.freeze
 
   def initialize(ai_service: nil)
@@ -48,8 +48,8 @@ class EmotionExtractionService
     prompt = build_emotion_prompt(content)
 
     messages = [
-      { role: 'system', content: emotion_analysis_system_prompt },
-      { role: 'user', content: prompt }
+      { role: "system", content: emotion_analysis_system_prompt },
+      { role: "user", content: prompt }
     ]
 
     response = @ai_service.chat(
@@ -58,7 +58,7 @@ class EmotionExtractionService
       max_tokens: 200
     )
 
-    parse_emotion_response(response['content'])
+    parse_emotion_response(response["content"])
   end
 
   def emotion_analysis_system_prompt
@@ -93,13 +93,13 @@ class EmotionExtractionService
     return [] unless json_match
 
     json_data = JSON.parse(json_match[0])
-    emotions = json_data['emotions'] || []
+    emotions = json_data["emotions"] || []
 
     emotions.map do |emotion|
       {
-        name: emotion['name'].to_sym,
-        intensity: emotion['intensity'].to_f,
-        label: EMOTION_CATEGORIES[emotion['name'].to_sym] || emotion['name']
+        name: emotion["name"].to_sym,
+        intensity: emotion["intensity"].to_f,
+        label: EMOTION_CATEGORIES[emotion["name"].to_sym] || emotion["name"]
       }
     end
   rescue JSON::ParserError => e

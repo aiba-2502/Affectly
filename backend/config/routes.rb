@@ -7,32 +7,39 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   root "home#index"
-  
+
   # API routes
   namespace :api do
     namespace :v1 do
       # Authentication routes
-      post 'auth/signup', to: 'auth#signup'
-      post 'auth/login', to: 'auth#login'
-      delete 'auth/logout', to: 'auth#logout'
-      get 'auth/me', to: 'auth#me'
-      
+      post "auth/signup", to: "auth#signup"
+      post "auth/login", to: "auth#login"
+      delete "auth/logout", to: "auth#logout"
+      get "auth/me", to: "auth#me"
+
       # User routes
-      get 'users/me', to: 'users#me'
-      patch 'users/me', to: 'users#update'
-      
+      get "users/me", to: "users#me"
+      patch "users/me", to: "users#update"
+
       # Information routes
-      get 'information', to: 'information#index'
-      
+      get "information", to: "information#index"
+
       # Chat routes
-      resources :chats, only: [:create, :index, :destroy] do
+      resources :chats, only: [ :create, :index, :destroy ] do
         collection do
-          get 'sessions'
+          get "sessions"
+          delete "sessions/:id", to: "chats#destroy_session"
         end
       end
 
       # Voice routes
-      post 'voices/generate', to: 'voices#generate'
+      post "voices/generate", to: "voices#generate"
+
+      # Report routes
+      get "report", to: "reports#show"
+      post "report/analyze", to: "reports#analyze"
+      get "report/weekly", to: "reports#weekly"
+      get "report/monthly", to: "reports#monthly"
     end
   end
 end

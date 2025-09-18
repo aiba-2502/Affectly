@@ -65,21 +65,6 @@ export default function HistoryPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 relative z-20">
-        <div className="flex justify-between items-center">
-          <h1 className="text-lg font-semibold text-gray-900">チャット履歴</h1>
-          <button
-            onClick={handleNewChat}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
-            title="新しいチャット"
-          >
-            <PlusIcon className="w-5 h-5" />
-            <span className="text-sm">新規チャット</span>
-          </button>
-        </div>
-      </div>
-
       {/* Main Content - 左右分割レイアウト */}
       <div className="flex-1 flex relative overflow-hidden">
         {/* Left Side - Live2D Character エリア - 拡大版 */}
@@ -102,7 +87,7 @@ export default function HistoryPage() {
         </div>
 
         {/* Right Side - History List */}
-        <div className="flex-1 overflow-y-auto bg-white">
+        <div className="flex-1 overflow-y-auto bg-white pb-24">
           <div className="container mx-auto px-4 py-6 max-w-4xl">
             <HistoryList />
           </div>

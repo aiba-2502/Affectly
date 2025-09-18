@@ -1,8 +1,7 @@
 class DynamicPromptService
-
   def initialize(session_messages = [])
     @session_messages = session_messages
-    @user_messages = session_messages.select { |m| m.role == 'user' }
+    @user_messages = session_messages.select { |m| m.role == "user" }
     @message_count = @user_messages.count
   end
 
@@ -83,7 +82,7 @@ class DynamicPromptService
     words2 = message2.split(/[、。\s]/).reject(&:empty?)
 
     common_words = words1 & words2
-    similarity = common_words.length.to_f / [words1.length, words2.length].min
+    similarity = common_words.length.to_f / [ words1.length, words2.length ].min
 
     similarity > DynamicPromptConfig::SIMILARITY_THRESHOLD
   end

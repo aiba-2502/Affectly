@@ -1,7 +1,6 @@
 module Api
   module V1
     class InformationController < ApplicationController
-
       def index
         information = {
           app_name: "心のログ (Kokoro Log)",
@@ -94,7 +93,7 @@ module Api
         }
 
         render json: {
-          status: 'success',
+          status: "success",
           data: information
         }
       end

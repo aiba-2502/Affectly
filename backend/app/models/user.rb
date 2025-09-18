@@ -2,7 +2,7 @@
 
 class User < ApplicationRecord
   has_secure_password
-  
+
   # Associations
   has_many :chats, dependent: :destroy
   has_many :chat_messages, dependent: :destroy
@@ -12,12 +12,12 @@ class User < ApplicationRecord
 
   # Validations
   validates :name, presence: true, length: { maximum: AppConstants::MAX_NAME_LENGTH }
-  validates :email, presence: true, 
+  validates :email, presence: true,
                     length: { maximum: AppConstants::MAX_EMAIL_LENGTH },
                     uniqueness: { case_sensitive: false },
                     format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :password, presence: true, length: { minimum: AppConstants::MIN_PASSWORD_LENGTH }, allow_nil: true
-  validates :is_active, inclusion: { in: [true, false] }
+  validates :is_active, inclusion: { in: [ true, false ] }
 
   # Callbacks
   before_save :downcase_email
