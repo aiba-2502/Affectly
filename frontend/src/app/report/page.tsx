@@ -97,7 +97,7 @@ export default function ReportPage() {
       console.log('レポートデータを取得中...');
 
       // トークンをセット
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       if (token) {
         reportService.setToken(token);
       }

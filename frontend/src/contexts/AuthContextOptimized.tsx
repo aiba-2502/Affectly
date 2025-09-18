@@ -26,8 +26,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
+      console.log('[Auth] checkAuth - token:', token ? 'exists' : 'not found');
       if (!token) {
+        console.log('[Auth] checkAuth - No token, setting user to null');
         setUser(null);
         setIsLoading(false);
         return;
@@ -49,9 +51,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (response.ok) {
           const userData = await response.json();
+          console.log('[Auth] checkAuth - Authentication successful:', userData);
           setUser(userData);
         } else {
-          localStorage.removeItem('token');
+          console.log('[Auth] checkAuth - Authentication failed, status:', response.status);
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
           setUser(null);
         }
       } catch (error: unknown) {
@@ -94,14 +99,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const data = await response.json();
-    localStorage.setItem('token', data.token);
+    console.log('[Auth] login - Success, received data:', data);
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('refresh_token', data.refresh_token);
     localStorage.setItem('user', JSON.stringify(data.user)); // ユーザー情報もキャッシュ
+    console.log('[Auth] login - Saved token to localStorage:', data.access_token);
     setUser(data.user);
-    router.push('/');
+
+    // 状態更新を確実に反映させるため、ページをリロード
+    window.location.href = '/';
   };
 
   const logout = async () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     setUser(null);
     router.push('/login');
@@ -110,8 +121,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // 初期ロード時のユーザー情報取得を最適化
     const initAuth = async () => {
-      const token = localStorage.getItem('token');
+      console.log('[Auth] initAuth - Starting initialization');
+      const token = localStorage.getItem('access_token');
+      console.log('[Auth] initAuth - Token from localStorage:', token ? 'exists' : 'not found');
       if (!token) {
+        console.log('[Auth] initAuth - No token found, setting isLoading to false');
         setIsLoading(false);
         return;
       }

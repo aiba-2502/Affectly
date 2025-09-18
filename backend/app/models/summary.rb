@@ -111,12 +111,12 @@ class Summary < ApplicationRecord
 
     if !analyzed_data_exists
       # 初回分析の条件：10メッセージ（5ラリー）以上
-      return total_messages >= 10
+      total_messages >= 10
     else
       # 前回分析以降の新規メッセージ数（ユーザーとアシスタントの両方をカウント）
       new_messages = user.chat_messages.where("created_at > ?", analysis_data["analyzed_at"]).count
       # 3ラリー（6メッセージ）以上で分析可能
-      return new_messages >= 6
+      new_messages >= 6
     end
   end
 

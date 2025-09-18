@@ -46,7 +46,7 @@ export const HistoryList: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       if (token) {
         chatApi.setToken(token);
         const response = await chatApi.getChatSessions();
@@ -72,7 +72,7 @@ export const HistoryList: React.FC = () => {
 
     try {
       setDeletingSessionId(sessionToDelete);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       if (token) {
         chatApi.setToken(token);
         await chatApi.deleteChatSession(sessionToDelete);
@@ -105,9 +105,9 @@ export const HistoryList: React.FC = () => {
     try {
       // セッションIDを設定
       setSessionId(sessionId);
-      
+
       // メッセージを読み込む
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       if (token) {
         chatApi.setToken(token);
         const response = await chatApi.getMessages(sessionId);

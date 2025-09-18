@@ -37,9 +37,10 @@ export const ChatContainer: React.FC = () => {
 
   useEffect(() => {
     // トークンを取得
-    const storedToken = localStorage.getItem('token');
+    const storedToken = localStorage.getItem('access_token');
     if (storedToken) {
       setToken(storedToken);
+      // chatApiにトークンを設定
       chatApi.setToken(storedToken);
       // Live2Dを遅延ロード
       const timer = setTimeout(() => {

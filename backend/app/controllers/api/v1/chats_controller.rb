@@ -1,5 +1,5 @@
 class Api::V1::ChatsController < ApplicationController
-  before_action :authorize_request
+  before_action :authenticate_user!
 
   def create
     # セッションIDの生成または取得

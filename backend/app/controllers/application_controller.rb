@@ -1,6 +1,28 @@
 class ApplicationController < ActionController::API
   attr_reader :current_user
 
+  # ApiTokenベースの認証メソッド
+  def authenticate_user!
+    token_value = extract_token_from_header
+
+    unless token_value
+      return render json: { error: "Authorization header required" }, status: :unauthorized
+    end
+
+    access_token = ApiToken.find_by_token(token_value)
+
+    if access_token.nil? || !access_token.access? || !access_token.token_valid?
+      return render json: { error: "Invalid or expired token" }, status: :unauthorized
+    end
+
+    @current_user = access_token.user
+  end
+
+  def extract_token_from_header
+    request.headers["Authorization"]&.split(" ")&.last
+  end
+
+  # JWTベースの認証メソッド（後方互換性のため残す）
   def authorize_request
     header = request.headers["Authorization"]
     header = header.split(" ").last if header

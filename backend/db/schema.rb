@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_31_000000) do
+ActiveRecord::Schema[8.0].define(version: 2025_02_19_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -24,7 +24,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_31_000000) do
     t.datetime "expires_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "token_kind", limit: 20, default: "access", null: false
+    t.string "chat_chain_id"
+    t.datetime "revoked_at"
+    t.index ["chat_chain_id", "created_at"], name: "idx_api_tokens_chain_created"
+    t.index ["chat_chain_id"], name: "index_api_tokens_on_chat_chain_id"
     t.index ["encrypted_token"], name: "index_api_tokens_on_encrypted_token", unique: true
+    t.index ["revoked_at"], name: "index_api_tokens_on_revoked_at"
+    t.index ["token_kind"], name: "index_api_tokens_on_token_kind"
+    t.index ["user_id", "token_kind", "revoked_at"], name: "idx_api_tokens_user_kind_revoked"
     t.index ["user_id"], name: "index_api_tokens_on_user_id"
   end
 

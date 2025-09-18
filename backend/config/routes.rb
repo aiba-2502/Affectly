@@ -12,10 +12,11 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       # Authentication routes
-      post "auth/signup", to: "auth#signup"
-      post "auth/login", to: "auth#login"
-      delete "auth/logout", to: "auth#logout"
-      get "auth/me", to: "auth#me"
+      post "auth/signup", to: "auth#signup", as: :signup
+      post "auth/login", to: "auth#login", as: :login
+      post "auth/refresh", to: "auth#refresh", as: :refresh
+      post "auth/logout", to: "auth#logout", as: :logout
+      get "auth/me", to: "auth#me", as: :me
 
       # User routes
       get "users/me", to: "users#me"

@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContextOptimized";
 import Header from "@/components/Header";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import "@/services/authService"; // authServiceを初期化（インターセプター有効化）
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

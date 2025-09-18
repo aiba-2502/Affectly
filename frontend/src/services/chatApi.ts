@@ -1,11 +1,13 @@
 import axios from 'axios';
 import { ChatMessage, ChatRequest, ChatResponse, ChatSession } from '@/types/chat';
+import authService from '@/services/authService'; // authServiceをインポートしてインターセプターを有効化
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 class ChatApiService {
   private token: string | null = null;
 
+  // トークンを設定
   setToken(token: string) {
     this.token = token;
   }

@@ -22,7 +22,9 @@ export default function Home() {
   const [showLive2D, setShowLive2D] = useState(false);
 
   useEffect(() => {
+    console.log('[Home] Auth check - isLoading:', isLoading, 'user:', user);
     if (!isLoading && !user) {
+      console.log('[Home] No user found, redirecting to login');
       router.push('/login');
     }
   }, [user, isLoading, router]);
