@@ -28,6 +28,7 @@ Rails.application.routes.draw do
       resources :chats, only: [ :create, :index, :destroy ] do
         collection do
           get "sessions"
+          delete "sessions/:id", to: "chats#destroy_session"
         end
       end
 

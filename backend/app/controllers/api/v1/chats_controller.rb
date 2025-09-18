@@ -176,6 +176,22 @@ class Api::V1::ChatsController < ApplicationController
     render json: { error: "Message not found" }, status: :not_found
   end
 
+  def destroy_session
+    session_id = params[:id]
+
+    # セッションに属する全てのメッセージを削除
+    deleted_count = current_user.chat_messages.where(session_id: session_id).destroy_all.count
+
+    if deleted_count > 0
+      render json: { message: "Session deleted successfully", deleted_count: deleted_count }, status: :ok
+    else
+      render json: { error: "Session not found" }, status: :not_found
+    end
+  rescue StandardError => e
+    Rails.logger.error "Session deletion error: #{e.message}"
+    render json: { error: "Failed to delete session" }, status: :internal_server_error
+  end
+
   private
 
   def chat_params

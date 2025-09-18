@@ -78,6 +78,18 @@ class ChatApiService {
       throw error;
     }
   }
+
+  async deleteChatSession(sessionId: string): Promise<void> {
+    try {
+      await axios.delete(
+        `${API_BASE_URL}/api/v1/chats/sessions/${sessionId}`,
+        { headers: this.getHeaders() }
+      );
+    } catch (error) {
+      console.error('Error deleting chat session:', error);
+      throw error;
+    }
+  }
 }
 
 export const chatApi = new ChatApiService();
