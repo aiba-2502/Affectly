@@ -45,12 +45,12 @@ export default function Signup() {
 
       if (response.ok) {
         // トークンをローカルストレージに保存
-        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('refresh_token', data.refresh_token);
         localStorage.setItem('user', JSON.stringify(data.user));
         // AuthContextを更新
         await checkAuth();
-        // 登録成功 - Hello World画面へ遷移
+        // 登録成功 - ホーム画面へ遷移
         router.push('/');
       } else {
         setErrors(data.errors || ['登録に失敗しました']);

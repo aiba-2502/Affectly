@@ -1,4 +1,5 @@
 class ApplicationController < ActionController::API
+  include ActionController::Cookies
   attr_reader :current_user
 
   # ApiTokenベースの認証メソッド

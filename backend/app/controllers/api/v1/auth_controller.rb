@@ -9,6 +9,7 @@ module Api
 
         if user.save
           tokens = ApiToken.generate_token_pair(user)
+          set_auth_cookies(tokens)
           render json: {
             access_token: tokens[:access_token].raw_token,
             refresh_token: tokens[:refresh_token].raw_token,
@@ -27,6 +28,7 @@ module Api
           ApiToken.cleanup_old_tokens(user.id)
 
           tokens = ApiToken.generate_token_pair(user)
+          set_auth_cookies(tokens)
           render json: {
             access_token: tokens[:access_token].raw_token,
             refresh_token: tokens[:refresh_token].raw_token,
@@ -103,6 +105,9 @@ module Api
           ).update_all(revoked_at: Time.current)
         end
 
+        # クッキーをクリア
+        clear_auth_cookies
+
         render json: { message: "Logged out successfully" }, status: :ok
       end
 
@@ -126,6 +131,30 @@ module Api
           email: user.email,
           name: user.name
         }
+      end
+
+      def set_auth_cookies(tokens)
+        # HTTP-onlyクッキーとしてトークンを設定
+        cookies[:access_token] = {
+          value: tokens[:access_token].raw_token,
+          httponly: true,
+          secure: Rails.env.production?,
+          same_site: :lax,
+          expires: 2.hours.from_now
+        }
+
+        cookies[:refresh_token] = {
+          value: tokens[:refresh_token].raw_token,
+          httponly: true,
+          secure: Rails.env.production?,
+          same_site: :lax,
+          expires: 30.days.from_now
+        }
+      end
+
+      def clear_auth_cookies
+        cookies.delete(:access_token)
+        cookies.delete(:refresh_token)
       end
 
       # authenticate_user!とextract_token_from_headerはApplicationControllerに移動済み
