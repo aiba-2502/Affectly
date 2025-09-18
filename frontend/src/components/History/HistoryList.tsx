@@ -261,7 +261,7 @@ export const HistoryList: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-[47rem] overflow-y-auto pr-2 scrollbar-thin">
           {filteredSessions.map((session) => (
         <button
           key={session.session_id}

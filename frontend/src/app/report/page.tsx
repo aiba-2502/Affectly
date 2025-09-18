@@ -269,7 +269,7 @@ export default function ReportPage() {
         </div>
 
         {/* 右カラム - レポートコンテンツ */}
-        <div className="flex-1 overflow-y-auto bg-gray-50">
+        <div className="flex-1 overflow-y-auto bg-gray-50 pb-28 scrollbar-thin">
           <div className="container mx-auto px-4 py-6 max-w-4xl">
             {/* AI分析セクション */}
             <div className="space-y-6 mb-8">
