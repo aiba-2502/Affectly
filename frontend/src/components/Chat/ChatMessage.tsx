@@ -98,7 +98,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
               ? 'bg-gray-100 text-gray-900' 
               : 'bg-white/90 backdrop-blur-sm text-gray-900 shadow-sm'
           }`}>
-            <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
+            <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-all"
+               style={{ maxWidth: '28ch', wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
               {sanitizedContent}
             </p>
           </div>
