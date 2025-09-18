@@ -356,7 +356,13 @@ export const HistoryList: React.FC = () => {
             </div>
           </button>
 
-          <div className="absolute top-4 right-4 flex items-center gap-2">
+          {/* 右上の矢印アイコン */}
+          <div className="absolute top-4 right-4">
+            <ChevronRightIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
+          </div>
+
+          {/* 右下の削除アイコン */}
+          <div className="absolute bottom-4 right-4">
             <button
               onClick={(e) => handleSessionDelete(session.session_id, session.preview || '会話の内容がありません', e)}
               className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -369,7 +375,6 @@ export const HistoryList: React.FC = () => {
                 <TrashIcon className="w-4 h-4" />
               )}
             </button>
-            <ChevronRightIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
           </div>
         </div>
           ))}
