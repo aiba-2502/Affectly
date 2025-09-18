@@ -40,9 +40,10 @@ export default function ChatPage() {
           <div className="flex gap-2">
             <button
               onClick={newSession}
-              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               title="新しいチャット"
             >
+              <span className="text-sm">新規チャット</span>
               <PlusIcon className="w-5 h-5" />
             </button>
           </div>
