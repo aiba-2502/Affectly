@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { LAppWavFileHandler } from '@/lib/live2d/demo/lappwavfilehandler';
 import { LAppDelegate } from '@/lib/live2d/demo/lappdelegate';
+import { RMSProcessor } from '@/lib/live2d/lipsync/RMSProcessor';
 
 // LAppDelegateの内部構造の型定義
 interface DelegateWithSubdelegates {
@@ -20,23 +21,30 @@ interface DelegateWithSubdelegates {
 
 export function useLipSyncHandler() {
   const wavFileHandlerRef = useRef<LAppWavFileHandler | null>(null);
+  const rmsProcessorRef = useRef<RMSProcessor | null>(null);
   const isLipSyncingRef = useRef<boolean>(false);
   const updateIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioStartTimeRef = useRef<number>(0);
   const previousRmsRef = useRef<number>(0);
   const lastUpdateTimeRef = useRef<number>(0);
+  const lastSampleOffsetRef = useRef<number>(0);
   const debugLogCountRef = useRef<number>(0);
-  const rmsScaleFactorRef = useRef<number>(10000); // 動的に調整される感度
+  const rmsScaleFactorRef = useRef<number>(8); // バランスの取れた感度設定
+  const rmsWindowSizeRef = useRef<number>(2048); // RMS計算のウィンドウサイズ
 
   useEffect(() => {
-    // WAVファイルハンドラーを初期化
+    // WAVファイルハンドラーとRMSプロセッサを初期化
     wavFileHandlerRef.current = new LAppWavFileHandler();
+    rmsProcessorRef.current = new RMSProcessor(2048, 0.3); // 2048サンプル、スムージング係数0.3
 
     // クリーンアップ
     return () => {
       if (wavFileHandlerRef.current) {
         wavFileHandlerRef.current.releasePcmData();
         wavFileHandlerRef.current = null;
+      }
+      if (rmsProcessorRef.current) {
+        rmsProcessorRef.current = null;
       }
       if (updateIntervalRef.current) {
         clearInterval(updateIntervalRef.current);
@@ -52,7 +60,13 @@ export function useLipSyncHandler() {
     isLipSyncingRef.current = false;
     previousRmsRef.current = 0;
     lastUpdateTimeRef.current = 0;
+    lastSampleOffsetRef.current = 0;
     debugLogCountRef.current = 0;
+
+    // RMSプロセッサをリセット
+    if (rmsProcessorRef.current) {
+      rmsProcessorRef.current.reset();
+    }
 
     // 更新タイマーを停止
     if (updateIntervalRef.current) {
@@ -113,8 +127,8 @@ export function useLipSyncHandler() {
           return;
         }
 
-        // WAVファイルハンドラーから RMS値を取得
-        if (wavFileHandlerRef.current) {
+        // 安定したRMS値を計算
+        if (wavFileHandlerRef.current && rmsProcessorRef.current) {
           // 現在時刻を取得
           const currentTime = Date.now();
 
@@ -133,28 +147,8 @@ export function useLipSyncHandler() {
           debugLogCountRef.current++;
           const shouldLog = debugLogCountRef.current % 3 === 0;
 
-          if (shouldLog) {
-            console.log('リップシンク更新詳細:', {
-              totalElapsed,
-              deltaTime,
-              userTimeSeconds: wavFileHandlerRef.current._userTimeSeconds,
-              sampleOffset: wavFileHandlerRef.current._sampleOffset,
-              samplesPerChannel: wavFileHandlerRef.current._wavFileInfo?._samplesPerChannel,
-              hasPcmData: !!wavFileHandlerRef.current._pcmData
-            });
-          }
-
-          // WAVファイルハンドラーを更新（前回からの差分時間を渡す）
+          // WAVファイルハンドラーを更新してサンプル位置を進める
           const updated = wavFileHandlerRef.current.update(deltaTime);
-
-          if (shouldLog) {
-            console.log('update結果:', {
-              updated,
-              deltaTime,
-              newUserTimeSeconds: wavFileHandlerRef.current._userTimeSeconds,
-              newSampleOffset: wavFileHandlerRef.current._sampleOffset
-            });
-          }
 
           if (!updated) {
             console.log('音声データ終了');
@@ -162,42 +156,70 @@ export function useLipSyncHandler() {
             return;
           }
 
-          // RMS値を取得
-          const rms = wavFileHandlerRef.current.getRms();
-          if (shouldLog) {
-            console.log('RMS値:', {
-              rawRms: rms,
-              lastRms: wavFileHandlerRef.current._lastRms
-            });
-          }
+          // 現在のサンプル位置を取得
+          const currentSampleOffset = wavFileHandlerRef.current._sampleOffset;
+          const pcmData = wavFileHandlerRef.current._pcmData;
+          const samplesPerChannel = wavFileHandlerRef.current._wavFileInfo?._samplesPerChannel || 0;
 
-          // スケーリングとスムージング処理
-          // 1. 基本的なスケーリング（感度調整）
-          // 自動調整されたスケールファクターを使用
-          let targetRms = Math.min(rms * rmsScaleFactorRef.current, 1);
+          // 新しいサンプルを取得してRMSプロセッサに送る
+          if (pcmData && pcmData[0] && currentSampleOffset < samplesPerChannel) {
+            // 前回の位置から現在位置までのサンプルを取得
+            const startIdx = Math.floor(lastSampleOffsetRef.current);
+            const endIdx = Math.min(Math.floor(currentSampleOffset), samplesPerChannel);
 
-          // 2. 最小値の閾値設定（微小な値を除外）
-          if (targetRms < 0.01) {  // 閾値も下げる（0.05→0.01）
-            targetRms = 0;
-          }
+            // 固定サイズのウィンドウでRMSを計算
+            const windowSize = 2048;
+            const windowStart = Math.max(0, endIdx - windowSize);
+            const windowEnd = endIdx;
 
-          // 3. スムージング処理（前の値との線形補間）
-          const smoothingFactor = 0.3; // 0-1の値、大きいほど変化が急激
-          const smoothedRms = previousRmsRef.current + (targetRms - previousRmsRef.current) * smoothingFactor;
-          previousRmsRef.current = smoothedRms;
+            // ウィンドウ内のサンプルでRMS計算
+            let rms = 0;
+            let sampleCount = 0;
+            for (let i = windowStart; i < windowEnd; i++) {
+              const sample = pcmData[0][i]; // 最初のチャンネルのみ使用
+              rms += sample * sample;
+              sampleCount++;
+            }
 
-          if (shouldLog) {
-            console.log('リップシンク値計算:', {
-              targetRms,
-              smoothedRms,
-              previousRms: previousRmsRef.current
-            });
-          }
+            if (sampleCount > 0) {
+              rms = Math.sqrt(rms / sampleCount);
+            }
 
-          // モデルにリップシンク値を設定
-          model.setLipSyncValue(smoothedRms);
-          if (shouldLog) {
-            console.log('モデルにリップシンク値を設定:', smoothedRms);
+            // RMS値の検証と正規化
+            const validatedRms = isNaN(rms) || !isFinite(rms) ? 0 : Math.abs(rms);
+
+            // スケーリング（感度調整）
+            let targetRms = Math.min(validatedRms * rmsScaleFactorRef.current, 1);
+
+            // 最小値の閾値設定（微小な値を除外）
+            if (targetRms < 0.02) {  // より低い閾値
+              targetRms = 0;
+            }
+
+            // スムージング処理（前の値との線形補間）
+            // 上昇時と下降時で異なるスムージングファクターを使用
+            const isIncreasing = targetRms > previousRmsRef.current;
+            const smoothingFactor = isIncreasing ? 0.4 : 0.15; // 開く時は速く、閉じる時はより滑らか
+            const smoothedRms = previousRmsRef.current + (targetRms - previousRmsRef.current) * smoothingFactor;
+            previousRmsRef.current = smoothedRms;
+
+            if (shouldLog) {
+              console.log('リップシンク値計算:', {
+                windowStart,
+                windowEnd,
+                sampleCount,
+                rawRms: validatedRms,
+                targetRms,
+                smoothedRms,
+                totalElapsed
+              });
+            }
+
+            // モデルにリップシンク値を設定
+            model.setLipSyncValue(smoothedRms);
+
+            // 現在のサンプル位置を記録
+            lastSampleOffsetRef.current = currentSampleOffset;
           }
         }
       } catch (error) {
@@ -255,67 +277,26 @@ export function useLipSyncHandler() {
 
       // 最初のPCMサンプルデータを確認（デバッグ用）
       if (wavFileHandlerRef.current._pcmData && wavFileHandlerRef.current._pcmData[0]) {
-        const firstSamples = wavFileHandlerRef.current._pcmData[0].slice(0, 10);
-        console.log('最初の10サンプル:', firstSamples);
-
-        // PCMデータの範囲を確認
         const pcmChannel = wavFileHandlerRef.current._pcmData[0];
-        let minValue = Infinity;
-        let maxValue = -Infinity;
+
+        // PCMデータの範囲を簡単に確認
         let avgValue = 0;
+        const sampleCount = Math.min(10000, pcmChannel.length);
 
-        for (let i = 0; i < Math.min(10000, pcmChannel.length); i++) {
-          const sample = pcmChannel[i];
-          minValue = Math.min(minValue, sample);
-          maxValue = Math.max(maxValue, sample);
-          avgValue += Math.abs(sample);
+        for (let i = 0; i < sampleCount; i++) {
+          avgValue += Math.abs(pcmChannel[i]);
         }
-        avgValue /= Math.min(10000, pcmChannel.length);
+        avgValue /= sampleCount;
 
-        console.log('PCMデータ範囲（最初の10000サンプル）:', {
-          min: minValue,
-          max: maxValue,
-          average: avgValue,
-          range: maxValue - minValue
+        console.log('PCMデータ確認:', {
+          totalSamples: pcmChannel.length,
+          avgAmplitude: avgValue
         });
 
-        // RMSのテスト計算
-        let testRms = 0;
-        for (let i = 0; i < Math.min(1000, pcmChannel.length); i++) {
-          const sample = pcmChannel[i];
-          testRms += sample * sample;
-        }
-        testRms = Math.sqrt(testRms / Math.min(1000, pcmChannel.length));
-        console.log('最初の1000サンプルのテストRMS:', testRms);
-
-        // より大きなセクションでのRMS計算（音声が本格的に始まる部分）
-        let midRms = 0;
-        const midStart = Math.floor(pcmChannel.length * 0.3); // 30%地点から
-        const midEnd = Math.min(midStart + 5000, pcmChannel.length);
-        for (let i = midStart; i < midEnd; i++) {
-          const sample = pcmChannel[i];
-          midRms += sample * sample;
-        }
-        midRms = Math.sqrt(midRms / (midEnd - midStart));
-        console.log('中間部分のRMS（30%地点から5000サンプル）:', midRms);
-
-        // 感度の自動調整
-        // 音声データの平均的なRMS値に基づいて適切なスケールファクターを計算
-        const referenceRms = Math.max(testRms, midRms);
-        if (referenceRms > 0) {
-          // 目標とするリップシンク値（0.3-0.5程度）に対してスケールファクターを計算
-          const targetLipSyncValue = 0.4;
-          rmsScaleFactorRef.current = targetLipSyncValue / referenceRms;
-          console.log('感度自動調整:', {
-            referenceRms,
-            calculatedScaleFactor: rmsScaleFactorRef.current,
-            expectedOutput: referenceRms * rmsScaleFactorRef.current
-          });
-        } else {
-          // RMSが0の場合はデフォルト値を使用
-          rmsScaleFactorRef.current = 10000;
-          console.log('感度自動調整: デフォルト値を使用（RMS=0）');
-        }
+        // 適切な固定感度を設定（自動調整は行わない）
+        // 一般的な音声データに対して適切な値
+        rmsScaleFactorRef.current = 8;
+        console.log('感度設定: 固定値', rmsScaleFactorRef.current);
       }
 
       // サンプル位置とRMS値をリセット（startメソッドの処理を直接実行）
@@ -323,9 +304,15 @@ export function useLipSyncHandler() {
       wavFileHandlerRef.current._userTimeSeconds = 0.0;
       wavFileHandlerRef.current._lastRms = 0.0;
 
+      // RMSプロセッサをリセット
+      if (rmsProcessorRef.current) {
+        rmsProcessorRef.current.reset();
+      }
+
       // 音声再生開始時刻を記録（タイミング同期のため）
       audioStartTimeRef.current = Date.now();
       lastUpdateTimeRef.current = audioStartTimeRef.current; // 最初の更新時刻も記録
+      lastSampleOffsetRef.current = 0; // サンプル位置もリセット
       console.log('リップシンク開始時刻記録:', audioStartTimeRef.current);
 
       // リップシンク更新を開始
