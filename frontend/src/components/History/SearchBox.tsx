@@ -80,7 +80,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch, availableEmotion
   const hasFilters = keyword || startDate || endDate || selectedEmotions.length > 0;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+    <div className="bg-white/75 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
       {/* 期間検索 - 常に表示 */}
       <div className="mb-4">
         <div className="grid grid-cols-2 gap-3">
@@ -117,7 +117,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch, availableEmotion
             <button
               type="button"
               onClick={() => setShowEmotionDropdown(!showEmotionDropdown)}
-              className="w-full px-3 py-2 text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm flex items-center justify-between"
+              className="w-full px-3 py-2 text-left bg-white/80 backdrop-blur-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm flex items-center justify-between"
             >
               <span className="flex items-center gap-2">
                 <TagIcon className="h-4 w-4 text-gray-400" />
@@ -146,7 +146,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch, availableEmotion
 
             {/* ドロップダウンメニュー */}
             {showEmotionDropdown && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+              <div className="absolute z-10 w-full mt-1 bg-white/90 backdrop-blur-sm border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                 <div className="p-2">
                   {availableEmotions.map((emotion) => (
                     <label
@@ -212,7 +212,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch, availableEmotion
           onChange={(e) => setKeyword(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           placeholder="キーワードで検索..."
-          className="block w-full pl-10 pr-3 py-2 text-black border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+          className="block w-full pl-10 pr-3 py-2 text-black border border-gray-300 rounded-md leading-5 bg-white/80 backdrop-blur-sm placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
         />
       </div>
 
@@ -220,14 +220,14 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch, availableEmotion
       <div className="flex gap-2">
         <button
           onClick={handleSearch}
-          className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          className="flex-1 px-4 py-2 bg-blue-600/90 backdrop-blur-sm text-white text-sm font-medium rounded-md hover:bg-blue-700/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
         >
           検索
         </button>
         {hasFilters && (
           <button
             onClick={handleClear}
-            className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors flex items-center gap-1"
+            className="px-4 py-2 bg-gray-100/70 backdrop-blur-sm text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200/70 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors flex items-center gap-1"
           >
             <XMarkIcon className="h-4 w-4" />
             クリア

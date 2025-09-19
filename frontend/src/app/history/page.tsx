@@ -68,7 +68,7 @@ export default function HistoryPage() {
       {/* Main Content - 左右分割レイアウト */}
       <div className="flex-1 flex relative overflow-hidden">
         {/* Left Side - Live2D Character エリア - 拡大版 */}
-        <div className="w-80 lg:w-96 xl:w-[28rem] bg-gradient-to-br from-purple-50/50 to-pink-50/50 backdrop-blur-sm border-r border-gray-200 flex-shrink-0 relative overflow-hidden">
+        <div className="w-80 lg:w-96 xl:w-[28rem] bg-transparent border-r border-gray-200 flex-shrink-0 relative overflow-hidden">
           {/* Live2Dコンポーネントを配置 - コンテナ全域を表示領域として使用 */}
           {showLive2D ? (
             <div className="absolute inset-0">
@@ -78,7 +78,7 @@ export default function HistoryPage() {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-gray-400 text-center">
                 <div className="animate-pulse">
-                  <div className="w-24 h-24 bg-gray-200/70 rounded-full mx-auto mb-2"></div>
+                  <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-2"></div>
                   <p className="text-xs">キャラクターを読み込み中...</p>
                 </div>
               </div>
@@ -87,7 +87,7 @@ export default function HistoryPage() {
         </div>
 
         {/* Right Side - History List */}
-        <div className="flex-1 overflow-y-auto bg-white/70 backdrop-blur-sm pb-24">
+        <div className="flex-1 overflow-y-auto bg-transparent pb-24">
           <div className="container mx-auto px-4 py-6 max-w-4xl">
             <HistoryList />
           </div>
