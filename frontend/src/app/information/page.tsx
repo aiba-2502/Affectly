@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 export default function InformationPage() {
   const router = useRouter();
@@ -15,9 +14,7 @@ export default function InformationPage() {
         '新規登録ボタンをクリック',
         'ユーザー名、メールアドレス、パスワードを入力',
         '登録ボタンをクリックして完了'
-      ],
-      link: '/signup',
-      linkText: '新規登録へ'
+      ]
     },
     {
       number: '2',
@@ -28,9 +25,7 @@ export default function InformationPage() {
         'テキスト入力欄にメッセージを入力',
         '送信ボタンをクリックまたはEnterキーで送信',
         'AIキャラクターの返答を待つ'
-      ],
-      link: '/chat',
-      linkText: 'チャット画面へ'
+      ]
     },
     {
       number: '3',
@@ -41,9 +36,7 @@ export default function InformationPage() {
         '確認したい日付の会話を選択',
         '会話内容と感情分析結果を確認',
         '必要に応じて削除も可能'
-      ],
-      link: '/history',
-      linkText: '履歴を見る'
+      ]
     },
     {
       number: '4',
@@ -54,29 +47,17 @@ export default function InformationPage() {
         '期間（日次/週次/月次）を選択',
         '感情の推移グラフを確認',
         'PDFでダウンロード可能'
-      ],
-      link: '/report',
-      linkText: 'レポートへ'
+      ]
     }
   ];
 
   return (
     <div className="min-h-screen">
       <div className="max-w-4xl mx-auto px-4 py-12">
-        {/* ヘッダー */}
-        <div className="mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            心のログの使い方
-          </h1>
-          <p className="text-gray-600">
-            4つのステップで簡単に始められます
-          </p>
-        </div>
-
         {/* 操作手順 */}
         <div className="space-y-8">
           {steps.map((step, index) => (
-            <div key={index} className="border-l-4 border-blue-500 pl-6 pb-8">
+            <div key={index} className="pb-8">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
                   <div className="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-lg">
@@ -104,18 +85,6 @@ export default function InformationPage() {
                     </ul>
                   </div>
 
-                  {/* リンクボタン */}
-                  {step.link && (
-                    <Link
-                      href={step.link}
-                      className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors text-sm"
-                    >
-                      {step.linkText}
-                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  )}
                 </div>
               </div>
             </div>
@@ -125,7 +94,7 @@ export default function InformationPage() {
         {/* 始めるボタン */}
         <div className="mt-16 text-center">
           <p className="text-gray-600 mb-4">
-            準備ができたら、チャットを始めてみましょう
+            さっそく、チャットを始めてみましょう
           </p>
           <button
             onClick={() => router.push('/chat')}

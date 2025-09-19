@@ -9,6 +9,8 @@ export default function MyPage() {
   const { user, logout, checkAuth } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [originalName, setOriginalName] = useState('');
+  const [originalEmail, setOriginalEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -19,8 +21,13 @@ export default function MyPage() {
     } else {
       setName(user.name || '');
       setEmail(user.email || '');
+      setOriginalName(user.name || '');
+      setOriginalEmail(user.email || '');
     }
   }, [user, router]);
+
+  // 変更があるかチェック
+  const hasChanges = name !== originalName || email !== originalEmail;
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,8 +37,8 @@ export default function MyPage() {
 
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/v1/users/profile`, {
-        method: 'PUT',
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/v1/users/me`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -47,6 +54,9 @@ export default function MyPage() {
       if (response.ok) {
         setMessage('プロフィールを更新しました');
         localStorage.setItem('user', JSON.stringify(data.user));
+        // 更新成功後、元の値も更新
+        setOriginalName(data.user.name || '');
+        setOriginalEmail(data.user.email || '');
         await checkAuth();
       } else {
         setError(data.error || 'プロフィールの更新に失敗しました');
@@ -75,8 +85,6 @@ export default function MyPage() {
   return (
     <div className="min-h-screen">
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-8">マイページ</h1>
-
         {/* メッセージ表示 */}
         {message && (
           <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
@@ -88,6 +96,16 @@ export default function MyPage() {
             {error}
           </div>
         )}
+
+        {/* ログアウトボタン */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
+          >
+            ログアウト
+          </button>
+        </div>
 
         <div className="bg-white/75 backdrop-blur-sm shadow rounded-lg p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">プロフィール設定</h2>
@@ -123,22 +141,12 @@ export default function MyPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !hasChanges}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? '更新中...' : 'プロフィールを更新'}
+              {loading ? '更新中...' : !hasChanges ? '変更がありません' : 'プロフィールを更新'}
             </button>
           </form>
-        </div>
-
-        {/* ログアウト */}
-        <div className="text-center mt-8">
-          <button
-            onClick={handleLogout}
-            className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-          >
-            ログアウト
-          </button>
         </div>
       </div>
     </div>
