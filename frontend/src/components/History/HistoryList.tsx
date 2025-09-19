@@ -312,7 +312,7 @@ export const HistoryList: React.FC = () => {
           {filteredSessions.map((session) => (
         <div
           key={session.session_id}
-          className="relative bg-white hover:bg-gray-50 rounded-lg p-4 transition-colors border border-gray-200 hover:border-gray-300 group"
+          className="relative bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-lg p-4 transition-colors border border-gray-200 hover:border-gray-300 group"
         >
           <button
             onClick={() => handleSessionClick(session.session_id)}

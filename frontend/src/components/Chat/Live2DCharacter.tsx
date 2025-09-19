@@ -40,7 +40,6 @@ export const Live2DCharacter: React.FC<Live2DCharacterProps> = ({
           view: canvasRef.current,
           width: 300,
           height: 400,
-          backgroundColor: 0xffffff,
           backgroundAlpha: 0,
           antialias: true,
           resolution: window.devicePixelRatio || 1

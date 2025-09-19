@@ -73,7 +73,7 @@ export default function MyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-8">マイページ</h1>
 
@@ -89,7 +89,7 @@ export default function MyPage() {
           </div>
         )}
 
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">プロフィール設定</h2>
 
           <form onSubmit={handleUpdateProfile} className="space-y-4">

@@ -194,7 +194,7 @@ export default function ReportPage() {
   const currentReport = reportData?.conversationReport[activeTab];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen">
       {/* 分析通知バナー（常時表示） */}
       <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
         <div className="flex items-center justify-between">
@@ -250,7 +250,7 @@ export default function ReportPage() {
       {/* Main Content - 左右分割レイアウト */}
       <div className="flex-1 flex relative overflow-hidden">
         {/* 左カラム - Live2D Character エリア - 拡大版 */}
-        <div className="w-80 lg:w-96 xl:w-[28rem] bg-gradient-to-br from-purple-50 to-pink-50 border-r border-gray-200 flex-shrink-0 relative overflow-hidden">
+        <div className="w-80 lg:w-96 xl:w-[28rem] bg-gradient-to-br from-purple-50/50 to-pink-50/50 backdrop-blur-sm border-r border-gray-200 flex-shrink-0 relative overflow-hidden">
           {/* Live2Dコンポーネントを配置 - コンテナ全域を表示領域として使用 */}
           {showLive2D ? (
             <div className="absolute inset-0">
@@ -260,7 +260,7 @@ export default function ReportPage() {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-gray-400 text-center">
                 <div className="animate-pulse">
-                  <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-2"></div>
+                  <div className="w-24 h-24 bg-gray-200/70 rounded-full mx-auto mb-2"></div>
                   <p className="text-xs">キャラクターを読み込み中...</p>
                 </div>
               </div>
@@ -269,13 +269,13 @@ export default function ReportPage() {
         </div>
 
         {/* 右カラム - レポートコンテンツ */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 pb-28 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto bg-transparent pb-28 scrollbar-thin">
           <div className="container mx-auto px-4 py-6 max-w-4xl">
             {/* AI分析セクション */}
             <div className="space-y-6 mb-8">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* 強みカード */}
-                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
+                <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">
                     {user.name || 'あなた'}の強み
                   </h3>
@@ -295,7 +295,7 @@ export default function ReportPage() {
                 </div>
 
                 {/* 思考特徴カード */}
-                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
+                <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">
                     {user.name || 'あなた'}の思考特徴
                   </h3>
@@ -315,7 +315,7 @@ export default function ReportPage() {
                 </div>
 
                 {/* 価値観カード */}
-                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
+                <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">
                     {user.name || 'あなた'}の価値観
                   </h3>
@@ -337,7 +337,7 @@ export default function ReportPage() {
             </div>
 
             {/* 会話分析セクション */}
-            <div className="bg-white rounded-lg shadow-sm">
+            <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm">
               {/* タブ */}
               <div className="border-b border-gray-200">
                 <div className="flex">

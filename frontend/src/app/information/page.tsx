@@ -61,7 +61,7 @@ export default function InformationPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <div className="max-w-4xl mx-auto px-4 py-12">
         {/* ヘッダー */}
         <div className="mb-12">
@@ -92,7 +92,7 @@ export default function InformationPage() {
                   </p>
 
                   {/* 具体的な操作手順 */}
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4 mb-4 border border-gray-200">
                     <p className="text-sm font-medium text-gray-700 mb-2">操作手順：</p>
                     <ul className="space-y-1">
                       {step.actions.map((action, actionIndex) => (
