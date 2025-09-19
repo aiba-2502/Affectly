@@ -15,6 +15,7 @@ import { VowelDetector } from './lipsync/VowelDetector';
 import { LipSyncController } from './lipsync/LipSyncController';
 import { RMSProcessor } from './lipsync/RMSProcessor';
 import { PerformanceMonitor, PerformanceReport } from './PerformanceMonitor';
+import { NaturalMotionController } from './NaturalMotionController';
 
 export interface MousePosition {
   x: number;
@@ -77,6 +78,7 @@ export class NativeLive2DWrapper {
   private fpsUpdateTime: number = 0;
   private quality: Quality = 'medium';
   private performanceMonitor: PerformanceMonitor | null = null;
+  private naturalMotionController: NaturalMotionController | null = null;
 
   constructor() {}
 
@@ -142,6 +144,9 @@ export class NativeLive2DWrapper {
         maxMemoryMB: 100,
         maxCPU: 30
       });
+
+      // Initialize natural motion controller
+      this.naturalMotionController = new NaturalMotionController();
 
       this.initialized = true;
       return true;
@@ -221,6 +226,7 @@ export class NativeLive2DWrapper {
       this.performanceMonitor.startMonitoring(this);
     }
 
+    // Phase 1: Optimized render loop with 60 FPS target
     const render = () => {
       if (!this.rendering) {
         return;
@@ -228,35 +234,41 @@ export class NativeLive2DWrapper {
 
       const currentTime = performance.now();
       const deltaTime = currentTime - this.lastFrameTime;
+      const targetFrameTime = 1000 / this.targetFPS;
 
-      // FPS calculation
-      this.frameCount++;
-      if (currentTime - this.fpsUpdateTime >= 1000) {
-        this.currentFPS = this.frameCount;
-        this.frameCount = 0;
-        this.fpsUpdateTime = currentTime;
+      // Only render if enough time has passed (60 FPS cap)
+      if (deltaTime >= targetFrameTime) {
+        // Update FPS calculation
+        if (this.naturalMotionController) {
+          this.naturalMotionController.updateFPS(currentTime);
+        }
+
+        this.frameCount++;
+        if (currentTime - this.fpsUpdateTime >= 1000) {
+          this.currentFPS = this.frameCount;
+          this.frameCount = 0;
+          this.fpsUpdateTime = currentTime;
+        }
+
+        // Check for frame skipping
+        const shouldSkip = this.naturalMotionController?.shouldSkipFrame(deltaTime) ?? false;
+
+        if (!shouldSkip && this.delegate && this.gl && this.canvas) {
+          // Clear with depth buffer for better performance
+          this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+          this.gl.clearColor(0, 0, 0, 0);
+          this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+
+          // Update
+          this.delegate.run();
+        }
+
+        // Adjust frame time to maintain stable 60 FPS
+        this.lastFrameTime = currentTime - (deltaTime % targetFrameTime);
       }
 
-      // Update and draw
-      if (this.delegate && this.gl && this.canvas) {
-        // Clear
-        this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-        this.gl.clearColor(0, 0, 0, 0);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-
-        // Update
-        this.delegate.run();
-      }
-
-      this.lastFrameTime = currentTime;
-
-      // Target FPS control
-      const targetInterval = 1000 / this.targetFPS;
-      const nextFrame = Math.max(0, targetInterval - deltaTime);
-
-      this.frameId = window.setTimeout(() => {
-        requestAnimationFrame(render);
-      }, nextFrame);
+      // Use requestAnimationFrame directly for V-Sync
+      this.frameId = requestAnimationFrame(render) as unknown as number;
     };
 
     render();
@@ -268,13 +280,18 @@ export class NativeLive2DWrapper {
   public stopRendering(): void {
     this.rendering = false;
     if (this.frameId !== null) {
-      clearTimeout(this.frameId);
+      cancelAnimationFrame(this.frameId);
       this.frameId = null;
     }
 
     // Stop performance monitoring
     if (this.performanceMonitor) {
       this.performanceMonitor.stopMonitoring();
+    }
+
+    // Stop natural motion controller rendering
+    if (this.naturalMotionController) {
+      this.naturalMotionController.stopRendering();
     }
   }
 
@@ -643,6 +660,12 @@ export class NativeLive2DWrapper {
     if (this.performanceMonitor) {
       this.performanceMonitor.stopMonitoring();
       this.performanceMonitor = null;
+    }
+
+    // Dispose natural motion controller
+    if (this.naturalMotionController) {
+      this.naturalMotionController.stopRendering();
+      this.naturalMotionController = null;
     }
 
     // Dispose lip sync components

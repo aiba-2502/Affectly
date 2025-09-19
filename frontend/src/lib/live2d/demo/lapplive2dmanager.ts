@@ -154,6 +154,11 @@ export class LAppLive2DManager {
 
     // モデル読み込み完了後にアイドルモーションを開始
     setTimeout(() => {
+      // Phase 3: Ensure initial gaze is reset
+      const model = this._models.at(0);
+      if (model) {
+        model.resetMousePosition();
+      }
       this.startIdleMotion();
     }, 1000);
   }
@@ -206,13 +211,18 @@ export class LAppLive2DManager {
   public startIdleMotion(): void {
     const model: LAppModel = this._models.at(0);
     if (model) {
-      // アイドルモーションをループ再生
+      // Phase 3: Reset initial gaze position
+      model.resetMousePosition();
+
+      // アイドルモーションをループ再生（ランダム間隔で）
       model.startRandomMotion(
         LAppDefine.MotionGroupIdle,
         LAppDefine.PriorityIdle,
         () => {
-          // モーション終了後、次のアイドルモーションを再生
-          this.startIdleMotion();
+          // モーション終了後、ランダム間隔で次のアイドルモーションを再生
+          setTimeout(() => {
+            this.startIdleMotion();
+          }, Math.random() * 3000 + 2000);
         }
       );
     }

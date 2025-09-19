@@ -44,6 +44,7 @@ import { LAppWavFileHandler } from './lappwavfilehandler';
 import { CubismMoc } from '../framework/model/cubismmoc';
 import { LAppDelegate } from './lappdelegate';
 import { LAppSubdelegate } from './lappsubdelegate';
+import { NaturalMotionController } from '../NaturalMotionController';
 
 export enum LoadStep {
   LoadAssets,
@@ -84,6 +85,16 @@ export class LAppModelBase extends CubismUserModel {
   public loadAssets(dir: string, fileName: string): void {
     // 既存のロード処理をキャンセル
     this.cancelLoading();
+
+    // Phase 3: Reset gaze to center on model load
+    this.resetMousePosition();
+    this._dragX = 0;
+    this._dragY = 0;
+    this._dragSpeedX = 0;
+    this._dragSpeedY = 0;
+    if (this._naturalMotionController) {
+      this._naturalMotionController.onModelLoad();
+    }
 
     this._modelHomeDir = dir;
     this._abortController = new AbortController();
@@ -589,10 +600,36 @@ export class LAppModelBase extends CubismUserModel {
     const targetDragX = this._dragManager.getX();
     const targetDragY = this._dragManager.getY();
 
-    // スムージング処理（急激な動きを防止）
-    const smoothingFactor = 0.05; // 値が小さいほど滑らか（より落ち着いた動きに調整）
-    this._dragX += (targetDragX - this._dragX) * smoothingFactor;
-    this._dragY += (targetDragY - this._dragY) * smoothingFactor;
+    // Phase 2: Enhanced smoothing with acceleration-based motion
+    const deltaX = targetDragX - this._dragX;
+    const deltaY = targetDragY - this._dragY;
+
+    // Apply acceleration for more natural movement
+    if (Math.abs(deltaX) > 0.01) {
+      this._dragSpeedX = Math.min(0.15, this._dragSpeedX + 0.02);
+    } else {
+      this._dragSpeedX *= 0.95; // Decelerate when close to target
+    }
+
+    if (Math.abs(deltaY) > 0.01) {
+      this._dragSpeedY = Math.min(0.15, this._dragSpeedY + 0.02);
+    } else {
+      this._dragSpeedY *= 0.95; // Decelerate when close to target
+    }
+
+    // Apply smoothed motion with improved factor
+    const smoothingFactor = 0.08; // Increased from 0.05 for smoother motion
+    this._dragX += deltaX * this._dragSpeedX * smoothingFactor;
+    this._dragY += deltaY * this._dragSpeedY * smoothingFactor;
+
+    // Phase 4: Add idle micro-movements when not actively moving
+    if (Math.abs(deltaX) < 0.1 && Math.abs(deltaY) < 0.1) {
+      const time = Date.now() * 0.001;
+      const idleX = Math.sin(time * 0.5) * 0.02;
+      const idleY = Math.cos(time * 0.3) * 0.02;
+      this._dragX += idleX;
+      this._dragY += idleY;
+    }
 
     // モーションによるパラメータ更新の有無
     let motionUpdated = false;
@@ -619,11 +656,18 @@ export class LAppModelBase extends CubismUserModel {
     // saveParametersは最後に移動して、全てのパラメータ更新後に保存
     //--------------------------------------------------------------------------
 
+    // Phase 4: Randomized blink timing for more natural appearance
     // まばたき - チャット画面でもまばたきは有効にする
     if (!motionUpdated) {
       if (this._eyeBlink != null) {
-        // メインモーションの更新がないとき
-        this._eyeBlink.updateParameters(this._model, deltaTimeSeconds); // 目パチ
+        const currentTime = Date.now();
+        // Randomize blink interval (2-6 seconds)
+        const blinkInterval = this._naturalMotionController.getNextBlinkInterval();
+
+        if (currentTime - this._lastBlinkTime > blinkInterval) {
+          this._eyeBlink.updateParameters(this._model, deltaTimeSeconds); // 目パチ
+          this._lastBlinkTime = currentTime;
+        }
       }
     }
 
@@ -646,11 +690,12 @@ export class LAppModelBase extends CubismUserModel {
     this._model.setParameterValueById(this._idParamAngleY, baseAngleY + this._dragY * 10);
     this._model.setParameterValueById(this._idParamAngleZ, baseAngleZ + this._dragX * this._dragY * -5);
 
-    // 体の向きの調整は無効化（顔のみ追従）
-    // コメントアウトして胴体の追従を無効化
-    // this._model.setParameterValueById(this._idParamBodyAngleX, baseBodyAngleX + this._dragX * 6);
-    // this._model.setParameterValueById(this._idParamBodyAngleY, baseBodyAngleY + this._dragY * 6);
-    // this._model.setParameterValueById(this._idParamBodyAngleZ, baseBodyAngleZ + this._dragX * this._dragY * -3);
+    // Phase 2: Enable body following with reduced ratio for subtle movement
+    // 体の追従を有効化（控えめに）
+    const bodyMotion = this._naturalMotionController.calculateBodyMotion(this._dragX, this._dragY);
+    this._model.setParameterValueById(this._idParamBodyAngleX, baseBodyAngleX + this._dragX * 3); // Reduced from 6 to 3
+    this._model.setParameterValueById(this._idParamBodyAngleY, baseBodyAngleY + this._dragY * 3); // Reduced from 6 to 3
+    this._model.setParameterValueById(this._idParamBodyAngleZ, baseBodyAngleZ + this._dragX * this._dragY * -1.5); // Reduced from -3 to -1.5
 
     // 目の向きの調整（自然な視線移動）
     if (LAppDefine.DebugLogEnable && (this._dragX !== 0 || this._dragY !== 0)) {
@@ -1222,6 +1267,9 @@ export class LAppModelBase extends CubismUserModel {
     this._allMotionCount = 0;
     this._wavFileHandler = new LAppWavFileHandler();
     this._consistency = false;
+
+    // Initialize natural motion controller
+    this._naturalMotionController = new NaturalMotionController();
   }
 
   private _subdelegate: LAppSubdelegate;
@@ -1258,4 +1306,10 @@ export class LAppModelBase extends CubismUserModel {
   _consistency: boolean; // MOC3整合性チェック管理用
   protected _lipSyncValue: number = 0.0; // リップシンク値（外部から設定可能）
   private _disableMotions: boolean = false;
+
+  // Natural motion controller
+  private _naturalMotionController: NaturalMotionController;
+  private _dragSpeedX: number = 0; // Phase 2: Acceleration-based motion
+  private _dragSpeedY: number = 0; // Phase 2: Acceleration-based motion
+  private _lastBlinkTime: number = 0; // Phase 4: Blink timing
 }
