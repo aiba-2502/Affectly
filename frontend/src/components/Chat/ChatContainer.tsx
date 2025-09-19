@@ -149,17 +149,6 @@ export const ChatContainer: React.FC = () => {
         {/* メッセージエリア */}
         <div className="flex-1 overflow-y-auto pb-40">
           <div className="w-full py-6 px-6 sm:px-8 md:px-12 lg:px-16">
-            {messages.length === 0 && (
-              <div className="text-center mt-20 px-4">
-                <h2 className="text-2xl font-semibold text-gray-700 mb-2">
-                  心のログ AI アシスタント
-                </h2>
-                <p className="text-gray-500">
-                  今日はどんなお話をしましょうか？
-                </p>
-              </div>
-            )}
-            
             {messages.map((message) => (
               <ChatMessage key={message.id} message={message} />
             ))}

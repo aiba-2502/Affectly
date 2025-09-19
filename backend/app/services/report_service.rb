@@ -255,7 +255,7 @@ class ReportService
       elsif analyzed_data[:message_count] >= 5
         summary += "AIとの対話を通じて、新たな気づきを得られています。"
       elsif main_topics.empty? && main_emotions.empty?
-        summary = "この期間のAIとの対話を記録しました。さらに対話を続けることで、より詳細な分析が可能になります。"
+        summary = "さらに対話を続けることで、より詳細な分析が可能になります。"
       else
         summary += "さらに対話を続けることで、より深い分析が可能になります。"
       end
