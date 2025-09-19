@@ -94,9 +94,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         <div className={`inline-block ${isUser ? 'text-left' : ''}`} 
              style={{ maxWidth: 'calc(100% - 48px)' }}>
           <div className={`rounded-lg px-4 py-2 ${
-            isUser 
-              ? 'bg-gray-100 text-gray-900' 
-              : 'bg-white/90 backdrop-blur-sm text-gray-900 shadow-sm'
+            isUser
+              ? 'bg-gray-100/70 backdrop-blur-sm text-gray-900'
+              : 'bg-white/70 backdrop-blur-sm text-gray-900 shadow-sm'
           }`}>
             <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-all"
                style={{ maxWidth: '28ch', wordBreak: 'break-all', overflowWrap: 'anywhere' }}>

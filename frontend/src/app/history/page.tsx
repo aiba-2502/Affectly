@@ -87,7 +87,7 @@ export default function HistoryPage() {
         </div>
 
         {/* Right Side - History List */}
-        <div className="flex-1 overflow-y-auto bg-white/90 backdrop-blur-sm pb-24">
+        <div className="flex-1 overflow-y-auto bg-white/70 backdrop-blur-sm pb-24">
           <div className="container mx-auto px-4 py-6 max-w-4xl">
             <HistoryList />
           </div>

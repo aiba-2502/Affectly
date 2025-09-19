@@ -51,7 +51,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               onKeyPress={handleKeyPress}
               placeholder={placeholder}
               disabled={disabled}
-              className="w-full resize-none rounded-lg border border-gray-300 bg-white/95 backdrop-blur-sm px-4 py-3 pr-12 focus:outline-none focus:border-gray-500 text-gray-900 placeholder-gray-500 text-[15px] leading-6 max-h-[200px] overflow-y-auto shadow-md"
+              className="w-full resize-none rounded-lg border border-gray-300 bg-white/70 backdrop-blur-sm px-4 py-3 pr-12 focus:outline-none focus:border-gray-500 text-gray-900 placeholder-gray-500 text-[15px] leading-6 max-h-[200px] overflow-y-auto shadow-md"
               rows={1}
               style={{ 
                 minHeight: '48px'
@@ -76,7 +76,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           
           {/* 注意書き（ChatGPT風） */}
           <div className="text-xs text-gray-600 text-center mt-2">
-          <span className="bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1 inline-block">
+          <span className="bg-white/60 backdrop-blur-sm rounded-lg px-3 py-1 inline-block">
             AIアシスタントは間違える可能性があります。重要な情報は確認してください。
           </span>
           </div>

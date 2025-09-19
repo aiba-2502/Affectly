@@ -34,7 +34,7 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header - ChatGPT風のシンプルなヘッダー */}
-      <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-3 relative z-20">
+      <div className="bg-white/75 backdrop-blur-sm border-b border-gray-200 px-4 py-3 relative z-20">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <h1 className="text-lg font-semibold text-gray-900">心のログ</h1>
           <div className="flex gap-2">

@@ -275,7 +275,7 @@ export default function ReportPage() {
             <div className="space-y-6 mb-8">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* 強みカード */}
-                <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
+                <div className="bg-white/75 backdrop-blur-sm border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">
                     {user.name || 'あなた'}の強み
                   </h3>
@@ -295,7 +295,7 @@ export default function ReportPage() {
                 </div>
 
                 {/* 思考特徴カード */}
-                <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
+                <div className="bg-white/75 backdrop-blur-sm border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">
                     {user.name || 'あなた'}の思考特徴
                   </h3>
@@ -315,7 +315,7 @@ export default function ReportPage() {
                 </div>
 
                 {/* 価値観カード */}
-                <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
+                <div className="bg-white/75 backdrop-blur-sm border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">
                     {user.name || 'あなた'}の価値観
                   </h3>
@@ -337,7 +337,7 @@ export default function ReportPage() {
             </div>
 
             {/* 会話分析セクション */}
-            <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm">
+            <div className="bg-white/75 backdrop-blur-sm rounded-lg shadow-sm">
               {/* タブ */}
               <div className="border-b border-gray-200">
                 <div className="flex">

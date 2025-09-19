@@ -89,7 +89,7 @@ export default function MyPage() {
           </div>
         )}
 
-        <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg p-6 mb-6">
+        <div className="bg-white/75 backdrop-blur-sm shadow rounded-lg p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">プロフィール設定</h2>
 
           <form onSubmit={handleUpdateProfile} className="space-y-4">

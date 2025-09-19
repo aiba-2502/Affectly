@@ -92,7 +92,7 @@ export default function InformationPage() {
                   </p>
 
                   {/* 具体的な操作手順 */}
-                  <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4 mb-4 border border-gray-200">
+                  <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 mb-4 border border-gray-200">
                     <p className="text-sm font-medium text-gray-700 mb-2">操作手順：</p>
                     <ul className="space-y-1">
                       {step.actions.map((action, actionIndex) => (

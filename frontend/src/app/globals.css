@@ -33,7 +33,7 @@ body::before {
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
-  opacity: 0.15; /* 可読性のため薄くする */
+  opacity: 0.4; /* 背景画像をより鮮明に表示 */
   z-index: -1;
   pointer-events: none;
 }
