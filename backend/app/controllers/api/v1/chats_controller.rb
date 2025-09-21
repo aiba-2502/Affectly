@@ -225,8 +225,10 @@ class Api::V1::ChatsController < ApplicationController
         user_messages.each do |msg|
           if msg.emotion_keywords.present?
             msg.emotion_keywords.each do |keyword|
+              tag = get_emotion_tag(keyword)
               all_emotions << {
                 name: keyword,
+                label: tag ? tag.metadata["label_ja"] : keyword,
                 intensity: msg.emotion_score || 0.5
               }
             end
@@ -298,11 +300,28 @@ class Api::V1::ChatsController < ApplicationController
       session_id: session_id,
       metadata: message.llm_metadata,
       emotions: message.emotion_keywords&.map { |k|
-        { name: k, intensity: message.emotion_score }
+        tag = get_emotion_tag(k)
+        {
+          name: k,
+          label: tag ? tag.metadata["label_ja"] : k,
+          intensity: message.emotion_score
+        }
       },
       created_at: message.sent_at || message.created_at,
       updated_at: message.updated_at
     }
+  end
+
+  def get_emotion_tag(name)
+    @emotion_tags_cache ||= load_emotion_tags_cache
+    @emotion_tags_cache[name]
+  end
+
+  def load_emotion_tags_cache
+    Rails.cache.fetch("emotion_tags_map", expires_in: 1.hour) do
+      Tag.where(category: "emotion", is_active: true)
+         .index_by(&:name)
+    end
   end
 
   def aggregate_emotions(emotions)
