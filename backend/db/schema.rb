@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_02_22_000003) do
+ActiveRecord::Schema[8.0].define(version: 2025_02_22_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -56,9 +56,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_22_000003) do
     t.datetime "sent_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "sender_kind", null: false
     t.index ["chat_id", "sent_at"], name: "idx_messages_chat_sent"
     t.index ["chat_id"], name: "index_messages_on_chat_id"
     t.index ["sender_id"], name: "index_messages_on_sender_id"
+    t.index ["sender_kind"], name: "index_messages_on_sender_kind"
     t.index ["sent_at"], name: "index_messages_on_sent_at"
     t.check_constraint "emotion_score >= 0::numeric AND emotion_score <= 1::numeric", name: "chk_emotion_score"
   end

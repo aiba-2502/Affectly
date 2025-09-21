@@ -3,6 +3,11 @@
 # インスタンススペック制約のため、MongoDBではなくRDBを使用
 # ==============================================================================
 class Message < ApplicationRecord
+  # Constants for sender_kind
+  SENDER_USER = "USER".freeze
+  SENDER_ASSISTANT = "ASSISTANT".freeze
+  SENDER_KINDS = [ SENDER_USER, SENDER_ASSISTANT ].freeze
+
   # Associations (based on DB_GUID_RDB_MESSAGES.md)
   belongs_to :chat
   belongs_to :sender, class_name: "User", foreign_key: "sender_id"
@@ -12,6 +17,7 @@ class Message < ApplicationRecord
   validates :sender_id, presence: true
   validates :content, presence: true, length: { maximum: 10_000 }
   validates :sent_at, presence: true
+  validates :sender_kind, presence: true, inclusion: { in: SENDER_KINDS }
   validates :emotion_score, numericality: {
     greater_than_or_equal_to: 0,
     less_than_or_equal_to: 1
@@ -30,6 +36,8 @@ class Message < ApplicationRecord
   scope :recent_first, -> { order(sent_at: :desc) }
   scope :chronological, -> { order(sent_at: :asc) }
   scope :with_emotion, -> { where.not(emotion_score: nil) }
+  scope :from_user, -> { where(sender_kind: SENDER_USER) }
+  scope :from_assistant, -> { where(sender_kind: SENDER_ASSISTANT) }
 
   # Class methods
   def self.for_chat(chat_id)
@@ -41,6 +49,7 @@ class Message < ApplicationRecord
       chat_id: chat_id,
       sender_id: sender_id,
       content: content,
+      sender_kind: SENDER_USER,
       **attrs
     )
   end
@@ -52,6 +61,7 @@ class Message < ApplicationRecord
       sender_id: chat.user_id,  # AIメッセージでも関連ユーザーIDを保存
       content: content,
       llm_metadata: llm_metadata,
+      sender_kind: SENDER_ASSISTANT,
       **attrs
     )
   end
@@ -62,18 +72,28 @@ class Message < ApplicationRecord
       chat_id: chat_id,
       sender_id: chat.user_id,  # システムメッセージでも関連ユーザーIDを保存
       content: content,
+      sender_kind: SENDER_ASSISTANT,  # システムメッセージもASSISTANT扱い
       **attrs
     )
   end
 
   # Instance methods
-  # メッセージ種別の判定はllm_metadataの有無などで判定する場合は、ここに実装
+  # メッセージ種別の判定（sender_kindベース）
+  def from_user?
+    sender_kind == SENDER_USER
+  end
+
+  def from_assistant?
+    sender_kind == SENDER_ASSISTANT
+  end
+
+  # 旧メソッド（後方互換性のため残す）
   def user_message?
-    llm_metadata.blank?
+    from_user?
   end
 
   def ai_message?
-    llm_metadata.present?
+    from_assistant?
   end
 
   # emotion_keywordsのヘルパーメソッド（JSON配列として扱う）

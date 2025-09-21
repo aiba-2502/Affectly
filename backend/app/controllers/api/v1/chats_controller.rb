@@ -38,6 +38,7 @@ class Api::V1::ChatsController < ApplicationController
         chat: chat,
         sender: current_user,
         content: chat_params[:content],
+        sender_kind: Message::SENDER_USER,
         emotion_score: emotion_score,
         emotion_keywords: emotion_keywords,
         llm_metadata: {
@@ -131,6 +132,7 @@ class Api::V1::ChatsController < ApplicationController
           chat: chat,
           sender: current_user, # AIの応答も現在のユーザーのコンテキストで保存
           content: ai_response["content"],
+          sender_kind: Message::SENDER_ASSISTANT,
           llm_metadata: {
             model: ai_response["model"],
             provider: ai_response["provider"],
@@ -292,7 +294,7 @@ class Api::V1::ChatsController < ApplicationController
     {
       id: message.id,
       content: message.content,
-      role: message.llm_metadata&.dig("role") || (message.sender_id == current_user.id ? "user" : "assistant"),
+      role: message.sender_kind == Message::SENDER_USER ? "user" : "assistant",
       session_id: session_id,
       metadata: message.llm_metadata,
       emotions: message.emotion_keywords&.map { |k|

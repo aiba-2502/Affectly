@@ -13,8 +13,8 @@ class Api::V1::ChatsControllerCreateTest < ActionDispatch::IntegrationTest
       user_id: @user.id,
       exp: 1.hour.from_now.to_i
     }
-    jwt_secret = ENV['JWT_SECRET_KEY'] || JsonWebToken::SECRET_KEY
-    @token = JWT.encode(payload, jwt_secret, 'HS256')
+    jwt_secret = ENV["JWT_SECRET_KEY"] || JsonWebToken::SECRET_KEY
+    @token = JWT.encode(payload, jwt_secret, "HS256")
   end
 
   test "should create chat message without ChatSessionService" do
@@ -31,16 +31,16 @@ class Api::V1::ChatsControllerCreateTest < ActionDispatch::IntegrationTest
         provider: "openai"
       },
       headers: {
-        'Authorization' => "Bearer #{@token}"
+        "Authorization" => "Bearer #{@token}"
       }
 
     # レスポンスの確認
     assert_response :success
 
     result = JSON.parse(response.body)
-    assert_not_nil result['session_id']
-    assert_not_nil result['chat_id']
-    assert_not_nil result['user_message']
+    assert_not_nil result["session_id"]
+    assert_not_nil result["chat_id"]
+    assert_not_nil result["user_message"]
 
     # データベースの確認
     chat = Chat.find_by(title: "session:#{session_id}", user: @user)
@@ -69,14 +69,14 @@ class Api::V1::ChatsControllerCreateTest < ActionDispatch::IntegrationTest
         provider: "openai"
       },
       headers: {
-        'Authorization' => "Bearer #{@token}"
+        "Authorization" => "Bearer #{@token}"
       }
 
     assert_response :success
 
     result = JSON.parse(response.body)
-    assert_equal session_id, result['session_id']
-    assert_equal existing_chat.id, result['chat_id']
+    assert_equal session_id, result["session_id"]
+    assert_equal existing_chat.id, result["chat_id"]
 
     # 同じチャットが使用されることを確認
     assert_equal 1, Chat.where(title: "session:#{session_id}").count
@@ -90,17 +90,17 @@ class Api::V1::ChatsControllerCreateTest < ActionDispatch::IntegrationTest
         provider: "openai"
       },
       headers: {
-        'Authorization' => "Bearer #{@token}"
+        "Authorization" => "Bearer #{@token}"
       }
 
     assert_response :success
 
     result = JSON.parse(response.body)
-    assert_not_nil result['session_id']
-    assert_not_nil result['chat_id']
+    assert_not_nil result["session_id"]
+    assert_not_nil result["chat_id"]
 
     # 生成されたsession_idでチャットが作成されることを確認
-    chat = Chat.find(result['chat_id'])
+    chat = Chat.find(result["chat_id"])
     assert_equal "session:#{result['session_id']}", chat.title
   end
 end
