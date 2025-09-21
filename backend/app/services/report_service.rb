@@ -4,6 +4,7 @@ class ReportService
   def initialize(user)
     @user = user
     @openai_service = OpenaiService.new
+    @emotion_service = EmotionExtractionService.new
   end
 
   def generate_report
@@ -69,9 +70,9 @@ class ReportService
 
   def generate_strengths
     # 会話履歴からユーザーの強みを分析
-    recent_messages = user.chat_messages
-                         .where(role: "user")
-                         .where("created_at >= ?", 1.month.ago)
+    recent_messages = user.messages
+                         .joins(:chat)
+                         .where("messages.sent_at >= ?", 1.month.ago)
                          .limit(20)
                          .pluck(:content)
 
@@ -89,9 +90,9 @@ class ReportService
 
   def generate_thinking_patterns
     # 会話履歴から思考パターンを分析
-    recent_messages = user.chat_messages
-                         .where(role: "user")
-                         .where("created_at >= ?", 1.month.ago)
+    recent_messages = user.messages
+                         .joins(:chat)
+                         .where("messages.sent_at >= ?", 1.month.ago)
                          .limit(20)
                          .pluck(:content)
 
@@ -108,9 +109,9 @@ class ReportService
 
   def generate_values
     # 会話履歴から価値観を分析
-    recent_messages = user.chat_messages
-                         .where(role: "user")
-                         .where("created_at >= ?", 1.month.ago)
+    recent_messages = user.messages
+                         .joins(:chat)
+                         .where("messages.sent_at >= ?", 1.month.ago)
                          .limit(20)
                          .pluck(:content)
 
@@ -133,9 +134,9 @@ class ReportService
 
   # パーソナルアドバイス生成（手動実行時のみ）
   def generate_personal_advice
-    messages = user.chat_messages
-                   .where(role: "user")
-                   .where("created_at >= ?", 1.month.ago)
+    messages = user.messages
+                   .joins(:chat)
+                   .where("messages.sent_at >= ?", 1.month.ago)
                    .limit(50) # より多くのコンテキストを使用
                    .pluck(:content)
 
@@ -158,8 +159,8 @@ class ReportService
   end
 
   def generate_period_report(start_date, period = nil)
-    # 指定期間の会話履歴を取得（ChatMessageモデルを使用）
-    messages = user.chat_messages.where("created_at >= ?", start_date)
+    # 指定期間の会話履歴を取得（Messagesテーブルを使用）
+    messages = user.messages.joins(:chat).where("messages.sent_at >= ?", start_date)
 
     # 会話内容を分析
     analyzed_data = analyze_conversations(messages)
@@ -178,8 +179,8 @@ class ReportService
     emotions = []
     message_count = 0
 
-    # ユーザーメッセージのみを分析対象とする
-    user_messages = messages.where(role: "user")
+    # ユーザーメッセージのみを分析対象とする（senderがuserのもの）
+    user_messages = messages.where(sender_id: user.id)
 
     user_messages.each do |message|
       # トピックと感情を抽出
@@ -268,7 +269,7 @@ class ReportService
     keyword_counts = Hash.new(0)
 
     # ユーザーメッセージのみを対象とする
-    user_messages = messages.where(role: "user")
+    user_messages = messages.where(sender_id: user.id)
 
     user_messages.each do |message|
       next unless message.content.present?
@@ -287,7 +288,7 @@ class ReportService
     emotion_keywords_map = {}
 
     # ユーザーメッセージのみを対象とする
-    user_messages = messages.where(role: "user")
+    user_messages = messages.where(sender_id: user.id)
 
     user_messages.each do |message|
       next unless message.content.present?
@@ -339,12 +340,15 @@ class ReportService
   end
 
   def extract_emotions(text)
-    # テキストから感情を抽出（簡易実装）
-    emotions = []
-    emotions << "喜び" if text.include?("嬉しい") || text.include?("楽しい")
-    emotions << "悲しみ" if text.include?("悲しい") || text.include?("つらい")
-    emotions << "不安" if text.include?("不安") || text.include?("心配")
-    emotions
+    # Use EmotionExtractionService for emotion detection
+    emotions = @emotion_service.extract_emotions(text)
+
+    # Convert to Japanese labels
+    emotion_tags = Tag.where(category: "emotion")
+    emotions.map do |emotion_data|
+      tag = emotion_tags.find { |t| t.name == emotion_data[:name].to_s }
+      tag&.metadata&.dig("label_ja") || emotion_data[:name].to_s
+    end.compact
   end
 
   def extract_keywords_from_text(text)
@@ -391,270 +395,56 @@ class ReportService
   end
 
   def detect_emotion(text)
-    # テキストから主要な感情を検出（改善版）
-    emotion_patterns = {
-      "喜び" => [ "嬉しい", "楽しい", "幸せ", "ワクワク", "最高", "良かった", "素晴らしい" ],
-      "悲しみ" => [ "悲しい", "つらい", "寂しい", "切ない", "泣きたい", "落ち込む" ],
-      "怒り" => [ "怒", "腹立", "イライラ", "ムカつく", "許せない", "頭にくる" ],
-      "不安" => [ "不安", "心配", "怖い", "緊張", "ドキドキ", "落ち着かない" ],
-      "期待" => [ "期待", "楽しみ", "ワクワク", "待ち遠しい", "希望" ],
-      "疲れ" => [ "疲れ", "しんどい", "だるい", "眠い", "ヘトヘト" ],
-      "満足" => [ "満足", "充実", "達成", "やりがい", "スッキリ" ]
-    }
+    # Use EmotionExtractionService for emotion detection
+    emotions = @emotion_service.extract_emotions(text)
+    return "その他" if emotions.empty?
 
-    # 各感情パターンをチェック
-    emotion_patterns.each do |emotion, patterns|
-      return emotion if patterns.any? { |pattern| text.include?(pattern) }
-    end
+    # Get the primary emotion (highest intensity)
+    primary = emotions.max_by { |e| e[:intensity] || 0.5 }
 
-    "その他"
+    # Convert to Japanese label
+    tag = Tag.find_by(name: primary[:name].to_s, category: "emotion")
+    tag&.metadata&.dig("label_ja") || "その他"
   end
 
   private
 
   def detect_multiple_emotions(text)
-    # テキストから複数の感情を検出
-    emotions = []
+    # Use EmotionExtractionService for emotion detection
+    emotions = @emotion_service.extract_emotions(text)
+    return [ "その他" ] if emotions.empty?
 
-    emotion_patterns = {
-      "喜び" => [ "嬉しい", "楽しい", "幸せ", "ワクワク", "最高", "良かった", "素晴らしい", "よかった" ],
-      "悲しみ" => [ "悲しい", "つらい", "寂しい", "切ない", "泣きたい", "落ち込む", "悲しく" ],
-      "怒り" => [ "怒", "腹立", "イライラ", "ムカつく", "許せない", "頭にくる", "腹が立つ", "アホらしい" ],
-      "不安" => [ "不安", "心配", "怖い", "緊張", "ドキドキ", "落ち着かない", "心細い" ],
-      "期待" => [ "期待", "楽しみ", "ワクワク", "待ち遠しい", "希望", "チャンス" ],
-      "疲れ" => [ "疲れ", "しんどい", "だるい", "眠い", "ヘトヘト", "消耗", "疲弊" ],
-      "満足" => [ "満足", "充実", "達成", "やりがい", "スッキリ", "気持ちよい", "気持ちよかった" ],
-      "孤独" => [ "孤独", "一人", "寂しい", "ポツン", "孤立" ],
-      "ストレス" => [ "ストレス", "プレッシャー", "重圧", "負担", "圧力", "キツい" ]
-    }
+    # Convert to Japanese labels
+    emotion_tags = Tag.where(category: "emotion")
+    japanese_emotions = emotions.map do |emotion_data|
+      tag = emotion_tags.find { |t| t.name == emotion_data[:name].to_s }
+      tag&.metadata&.dig("label_ja")
+    end.compact.uniq
 
-    # 各感情パターンをチェック
-    emotion_patterns.each do |emotion, patterns|
-      if patterns.any? { |pattern| text.include?(pattern) }
-        emotions << emotion
-      end
-    end
-
-    # 感情が検出されなかった場合、デフォルトを返す
-    emotions.empty? ? [ "その他" ] : emotions.uniq
+    japanese_emotions.empty? ? [ "その他" ] : japanese_emotions
   end
 
-  # AI分析用のヘルパーメソッド
-  def analyze_user_strengths(text)
-    # テキストから強みを分析
-    strengths = []
-
-    # キーワードベースの強み検出
-    if text.match?(/問題|解決|分析|ロジック|論理/)
-      strengths << {
-        id: SecureRandom.uuid,
-        title: "論理的思考力",
-        description: "問題を体系的に分析し、論理的に解決策を導き出す能力があります。"
-      }
-    end
-
-    if text.match?(/チーム|協力|一緒|仲間|みんな/)
-      strengths << {
-        id: SecureRandom.uuid,
-        title: "協調性",
-        description: "チームで協力して目標を達成する力があります。"
-      }
-    end
-
-    if text.match?(/新しい|挑戦|チャレンジ|変化|革新/)
-      strengths << {
-        id: SecureRandom.uuid,
-        title: "挑戦心",
-        description: "新しいことに積極的に挑戦し、変化を恐れない姿勢があります。"
-      }
-    end
-
-    if text.match?(/続け|継続|コツコツ|毎日|習慣/)
-      strengths << {
-        id: SecureRandom.uuid,
-        title: "継続力",
-        description: "目標に向かって継続的に努力を続ける力があります。"
-      }
-    end
-
-    if text.match?(/創造|アイデア|発想|クリエイティブ|ひらめき/)
-      strengths << {
-        id: SecureRandom.uuid,
-        title: "創造性",
-        description: "独創的なアイデアを生み出し、創造的に問題を解決する力があります。"
-      }
-    end
-
-    # 最低3つは返す
-    while strengths.length < 3
-      strengths << {
-        id: SecureRandom.uuid,
-        title: [ "向上心", "責任感", "柔軟性", "観察力", "計画性" ].sample,
-        description: "日々の会話から、優れた資質が感じられます。"
-      }
-    end
-
-    strengths.take(3)
-  end
-
-  def analyze_thinking_patterns(text)
-    # テキストから思考パターンを分析
-    patterns = []
-
-    if text.match?(/なぜ|どうして|理由|原因/)
-      patterns << {
-        id: SecureRandom.uuid,
-        title: "探求型思考",
-        description: "「なぜ」を追求し、物事の本質を理解しようとする思考パターンです。"
-      }
-    end
-
-    if text.match?(/もし|たら|れば|だったら|仮に/)
-      patterns << {
-        id: SecureRandom.uuid,
-        title: "仮説思考",
-        description: "様々な可能性を想定し、仮説を立てて考える思考パターンです。"
-      }
-    end
-
-    if text.match?(/まず|次に|最後|ステップ|順番/)
-      patterns << {
-        id: SecureRandom.uuid,
-        title: "段階的思考",
-        description: "物事を段階的に整理して考える思考パターンです。"
-      }
-    end
-
-    if text.match?(/全体|部分|詳細|大局|俯瞰/)
-      patterns << {
-        id: SecureRandom.uuid,
-        title: "俯瞰的思考",
-        description: "全体像を把握しながら詳細も見逃さない思考パターンです。"
-      }
-    end
-
-    # 最低2つは返す
-    while patterns.length < 2
-      patterns << {
-        id: SecureRandom.uuid,
-        title: [ "直感的思考", "分析的思考", "創造的思考" ].sample,
-        description: "独自の視点で物事を捉える思考パターンです。"
-      }
-    end
-
-    patterns.take(2)
-  end
-
-  def analyze_user_values(text)
-    # テキストから価値観を分析
-    values = []
-
-    # 成長・学習関連
-    if text.match?(/成長|学ぶ|学び|学習|勉強|スキル|向上|教|試|チャレンジ|レベル|開発|知識|経験|変化|進化|改善|できる|身に付|習得|マスター/)
-      values << {
-        id: SecureRandom.uuid,
-        title: "成長",
-        description: "継続的な学習と自己成長を大切にしています。"
-      }
-    end
-
-    # 人間関係
-    if text.match?(/家族|友人|友達|仲間|大切な人|つながり|人|コミュニ|会話|話|相談|関係|感謝|ありがとう|優し|思いやり|信頼|愛|理解|共感|協力|チーム/)
-      values << {
-        id: SecureRandom.uuid,
-        title: "人間関係",
-        description: "家族や友人との絆を大切にしています。"
-      }
-    end
-
-    # 自律性・自分らしさ
-    if text.match?(/自由|自分らし|自分|個性|独立|自己|主体|自信|信念|意志|決断|選択|責任|感情|気持ち|心|本当|素直|正直/)
-      values << {
-        id: SecureRandom.uuid,
-        title: "自律性",
-        description: "自分らしさを大切にし、主体的に行動することを重視しています。"
-      }
-    end
-
-    # 貢献・サポート
-    if text.match?(/社会|貢献|役立|助け|サポート|仕事|プロジェクト|意味|価値|目的|目標|ミッション|ビジョン|影響|インパクト|世界|未来/)
-      values << {
-        id: SecureRandom.uuid,
-        title: "貢献",
-        description: "社会や他者に貢献することに価値を見出しています。"
-      }
-    end
-
-    # バランス・調和
-    if text.match?(/バランス|調和|健康|休|リラックス|リフレッシュ|ゆとり|充実|幸せ|幸福|満足|安心|安定|穏やか|平和|楽し|エンジョイ|笑|ストレス|リセット/)
-      values << {
-        id: SecureRandom.uuid,
-        title: "調和",
-        description: "生活の各側面のバランスを大切にしています。"
-      }
-    end
-
-    # 創造性・興味
-    if text.match?(/創造|アイデア|アイディア|クリエイ|デザイン|芸術|アート|音楽|本|読書|映画|ゲーム|趣味|好き|興味|関心|面白|おもしろ|新し|オリジナル|ユニーク/)
-      values << {
-        id: SecureRandom.uuid,
-        title: "創造性",
-        description: "創造的な活動や新しいものを生み出すことを大切にしています。"
-      }
-    end
-
-    # 誠実さ・正義
-    if text.match?(/誠実|正直|正義|公平|公正|真実|ルール|マナー|約束|守る|正し|間違|エシカル|倫理|道徳/)
-      values << {
-        id: SecureRandom.uuid,
-        title: "誠実さ",
-        description: "誠実さと正義を大切にしています。"
-      }
-    end
-
-    # 挑戦・冒険
-    if text.match?(/挑戦|チャレンジ|冒険|リスク|新しいこと|トライ|チャンス|機会|可能性|ポテンシャル|限界|超え|突破/)
-      values << {
-        id: SecureRandom.uuid,
-        title: "挑戦",
-        description: "新しい挑戦や冒険を大切にしています。"
-      }
-    end
-
-    # 安定・安全
-    if text.match?(/安定|安全|安心|保守|計画|プラン|準備|リスク管理|予防|注意|慎重|確実|着実|堅実/)
-      values << {
-        id: SecureRandom.uuid,
-        title: "安定",
-        description: "安定した生活や確実性を大切にしています。"
-      }
-    end
-
-    # 最低2つは返す（より多様なデフォルト価値観を用意）
-    default_values = [
-      { title: "誠実さ", description: "正直で誠実な姿勢を大切にしています。" },
-      { title: "創造性", description: "新しいアイデアや発想を大切にしています。" },
-      { title: "安定", description: "安定した環境と着実な成果を重視しています。" },
-      { title: "挑戦", description: "新しいチャレンジを恐れない姿勢を持っています。" },
-      { title: "思いやり", description: "他者への配慮と思いやりを大切にしています。" },
-      { title: "自己実現", description: "自分の可能性を最大限に発揮することを目指しています。" },
-      { title: "柔軟性", description: "状況に応じて柔軟に対応することを大切にしています。" },
-      { title: "責任感", description: "自分の行動に責任を持つことを重視しています。" }
+  # Fallback methods when AI analysis fails
+  def fallback_user_strengths
+    [
+      { id: SecureRandom.uuid, title: "成長意欲", description: "新しいことを学ぶ意欲があり、継続的な成長を目指しています。" },
+      { id: SecureRandom.uuid, title: "内省力", description: "自分の考えや感情を振り返り、深く理解する力があります。" },
+      { id: SecureRandom.uuid, title: "対話力", description: "AIとの対話を通じて、自分の考えを整理し表現する能力があります。" }
     ]
+  end
 
-    # ランダムに選んで追加
-    while values.length < 2
-      selected = default_values.sample
-      unless values.any? { |v| v[:title] == selected[:title] }
-        values << {
-          id: SecureRandom.uuid,
-          title: selected[:title],
-          description: selected[:description]
-        }
-      end
-    end
+  def fallback_thinking_patterns
+    [
+      { id: SecureRandom.uuid, title: "探求型思考", description: "疑問を持ち、答えを探求する思考パターンがあります。" },
+      { id: SecureRandom.uuid, title: "整理型思考", description: "情報や感情を整理して理解する傾向があります。" }
+    ]
+  end
 
-    values.take(3) # 最大3つの価値観を返す
+  def fallback_user_values
+    [
+      { id: SecureRandom.uuid, title: "自己理解", description: "自分自身を深く理解することを大切にしています。" },
+      { id: SecureRandom.uuid, title: "成長", description: "継続的な学習と成長を重視しています。" }
+    ]
   end
 
   # AI分析メソッド
@@ -681,12 +471,12 @@ class ReportService
         end.take(3)
       else
         # フォールバック
-        analyze_user_strengths(messages.join(" "))
+        fallback_user_strengths()
       end
     rescue => e
       Rails.logger.error "AI analysis error for strengths: #{e.message}"
-      # フォールバック：従来のキーワードベース分析
-      analyze_user_strengths(messages.join(" "))
+      # フォールバック
+      fallback_user_strengths()
     end
   end
 
@@ -711,11 +501,11 @@ class ReportService
           }
         end.take(2)
       else
-        analyze_thinking_patterns(messages.join(" "))
+        fallback_thinking_patterns()
       end
     rescue => e
       Rails.logger.error "AI analysis error for thinking patterns: #{e.message}"
-      analyze_thinking_patterns(messages.join(" "))
+      fallback_thinking_patterns()
     end
   end
 
@@ -740,11 +530,11 @@ class ReportService
           }
         end.take(3)
       else
-        analyze_user_values(messages.join(" "))
+        fallback_user_values()
       end
     rescue => e
       Rails.logger.error "AI analysis error for values: #{e.message}"
-      analyze_user_values(messages.join(" "))
+      fallback_user_values()
     end
   end
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_02_20_000001) do
+ActiveRecord::Schema[8.0].define(version: 2025_02_22_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -34,21 +34,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_20_000001) do
     t.index ["token_family_id", "created_at"], name: "idx_api_tokens_chain_created"
     t.index ["token_family_id"], name: "index_api_tokens_on_token_family_id"
     t.index ["user_id"], name: "index_api_tokens_on_user_id"
-  end
-
-  create_table "chat_messages", force: :cascade do |t|
-    t.bigint "user_id", null: false
-    t.text "content"
-    t.string "role"
-    t.string "session_id"
-    t.jsonb "metadata", default: {}
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.jsonb "emotions", default: []
-    t.index ["emotions"], name: "index_chat_messages_on_emotions", using: :gin
-    t.index ["role"], name: "index_chat_messages_on_role"
-    t.index ["session_id"], name: "index_chat_messages_on_session_id"
-    t.index ["user_id"], name: "index_chat_messages_on_user_id"
   end
 
   create_table "chats", force: :cascade do |t|
@@ -98,6 +83,12 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_20_000001) do
     t.string "category", limit: 30
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "metadata", default: {}
+    t.boolean "is_active", default: true
+    t.index ["category", "is_active"], name: "index_tags_on_category_and_is_active"
+    t.index ["category"], name: "index_tags_on_category"
+    t.index ["is_active"], name: "index_tags_on_is_active"
+    t.index ["metadata"], name: "index_tags_on_metadata", using: :gin
     t.index ["name"], name: "index_tags_on_name", unique: true
   end
 
@@ -112,7 +103,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_20_000001) do
   end
 
   add_foreign_key "api_tokens", "users"
-  add_foreign_key "chat_messages", "users"
   add_foreign_key "chats", "tags"
   add_foreign_key "chats", "users"
   add_foreign_key "messages", "chats"

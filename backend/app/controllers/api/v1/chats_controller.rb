@@ -5,6 +5,13 @@ class Api::V1::ChatsController < ApplicationController
     # セッションIDの生成または取得
     session_id = params[:session_id] || generate_session_id
 
+    # Chat record を確保 (ChatSessionServiceなしで直接実装)
+    chat = Chat.find_by(title: "session:#{session_id}", user: current_user)
+    chat ||= Chat.create!(
+      user: current_user,
+      title: "session:#{session_id}"
+    )
+
     # 感情を抽出（AIサービスを渡す）
     provider = chat_params[:provider].presence || "openai"
     api_key = chat_params[:api_key].presence
@@ -19,23 +26,33 @@ class Api::V1::ChatsController < ApplicationController
       []
     end
 
-    # ユーザーメッセージを保存（感情情報を含む）
-    user_message = current_user.chat_messages.create!(
-      content: chat_params[:content],
-      role: "user",
-      session_id: session_id,
-      emotions: emotions,
-      metadata: {
-        timestamp: Time.current.to_i,
-        device: request.user_agent
-      }
-    )
+    # Messagesテーブルに保存
+    user_message = nil
+    ActiveRecord::Base.transaction do
+      # 感情データを処理
+      emotion_score = emotions.any? ? emotions.map { |e| e[:intensity] || 0.5 }.sum / emotions.size : 0.0
+      emotion_keywords = emotions.map { |e| e[:name].to_s }
 
-    # 過去のメッセージを取得
-    past_messages = current_user.chat_messages
-                                 .by_session(session_id)
-                                 .order(created_at: :asc)
-                                 .last(AppConstants::MAX_PAST_MESSAGES)
+      # Messageテーブルに保存
+      user_message = Message.create!(
+        chat: chat,
+        sender: current_user,
+        content: chat_params[:content],
+        emotion_score: emotion_score,
+        emotion_keywords: emotion_keywords,
+        llm_metadata: {
+          timestamp: Time.current.to_i,
+          device: request.user_agent
+        },
+        sent_at: Time.current
+      )
+    end
+
+    # 過去のメッセージを取得（Messagesテーブルから）
+    past_messages = Message.joins(:chat)
+                          .where(chat: chat)
+                          .order(sent_at: :asc)
+                          .last(AppConstants::MAX_PAST_MESSAGES)
 
     # AI APIを呼び出し
     begin
@@ -54,11 +71,20 @@ class Api::V1::ChatsController < ApplicationController
 
       if chat_params[:system_prompt].blank?
         # セッション全体のメッセージを取得（動的プロンプト生成用）
-        all_session_messages = current_user.chat_messages
-                                          .by_session(session_id)
-                                          .order(created_at: :asc)
+        all_session_messages = Message.joins(:chat)
+                                     .where(chat: chat)
+                                     .order(sent_at: :asc)
 
-        prompt_service = DynamicPromptService.new(all_session_messages)
+        # Messageオブジェクトをchat_messageライクなオブジェクトに変換
+        chat_message_like = all_session_messages.map do |msg|
+          OpenStruct.new(
+            content: msg.content,
+            role: msg.sender_id == current_user.id ? "user" : "assistant",
+            emotions: msg.emotion_keywords&.map { |k| { name: k, intensity: msg.emotion_score } }
+          )
+        end
+
+        prompt_service = DynamicPromptService.new(chat_message_like)
         dynamic_system_prompt = prompt_service.generate_system_prompt
 
         # temperatureも動的に調整（指定されていない場合）
@@ -68,11 +94,18 @@ class Api::V1::ChatsController < ApplicationController
       # デフォルト値の設定
       dynamic_temperature ||= 0.7
 
-      # メッセージを構築
-      messages = ai_service.build_messages(
-        past_messages[0...-1], # 最後のメッセージ（今回のユーザーメッセージ）を除く
-        dynamic_system_prompt
-      )
+      # メッセージを構築（Messageオブジェクトから）
+      messages = past_messages[0...-1].map do |msg|
+        {
+          role: msg.sender_id == current_user.id ? "user" : "assistant",
+          content: msg.content
+        }
+      end
+
+      # システムプロンプトを追加
+      if dynamic_system_prompt.present?
+        messages.unshift({ role: "system", content: dynamic_system_prompt })
+      end
 
       # 今回のユーザーメッセージを追加
       messages << { role: "user", content: chat_params[:content] }
@@ -91,22 +124,29 @@ class Api::V1::ChatsController < ApplicationController
         max_tokens: chat_params[:max_tokens]&.to_i
       )
 
-      # AIの応答を保存
-      assistant_message = current_user.chat_messages.create!(
-        content: ai_response["content"],
-        role: "assistant",
-        session_id: session_id,
-        metadata: {
-          model: ai_response["model"],
-          provider: ai_response["provider"],
-          timestamp: Time.current.to_i
-        }
-      )
+      # AIの応答を保存（Messagesテーブルに）
+      assistant_message = nil
+      ActiveRecord::Base.transaction do
+        assistant_message = Message.create!(
+          chat: chat,
+          sender: current_user, # AIの応答も現在のユーザーのコンテキストで保存
+          content: ai_response["content"],
+          llm_metadata: {
+            model: ai_response["model"],
+            provider: ai_response["provider"],
+            timestamp: Time.current.to_i,
+            role: "assistant"
+          },
+          sent_at: Time.current
+        )
+      end
 
+      # レスポンスをchat_message形式で返す（後方互換性）
       render json: {
         session_id: session_id,
-        user_message: serialize_message(user_message),
-        assistant_message: serialize_message(assistant_message)
+        chat_id: chat.id,
+        user_message: serialize_message_as_chat_message(user_message, session_id),
+        assistant_message: serialize_message_as_chat_message(assistant_message, session_id)
       }, status: :ok
 
     rescue StandardError => e
@@ -118,49 +158,87 @@ class Api::V1::ChatsController < ApplicationController
   def index
     session_id = params[:session_id]
 
-    messages = if session_id.present?
-                 current_user.chat_messages.by_session(session_id)
-    else
-                 current_user.chat_messages
-    end
+    if session_id.present?
+      # session_idからchatを特定
+      chat = Chat.find_by(title: "session:#{session_id}", user: current_user)
 
-    messages = messages.order(created_at: :asc)
+      if chat
+        messages = Message.where(chat: chat)
+                         .order(sent_at: :asc)
+                         .page(params[:page])
+                         .per(params[:per_page] || AppConstants::DEFAULT_PAGE_SIZE)
+
+        render json: {
+          messages: messages.map { |msg| serialize_message_as_chat_message(msg, session_id) },
+          total_count: messages.total_count,
+          current_page: messages.current_page,
+          total_pages: messages.total_pages
+        }
+      else
+        render json: {
+          messages: [],
+          total_count: 0,
+          current_page: 1,
+          total_pages: 0
+        }
+      end
+    else
+      # 全てのチャットからメッセージを取得
+      messages = Message.joins(:chat)
+                       .where(chats: { user_id: current_user.id })
+                       .order(sent_at: :asc)
                        .page(params[:page])
                        .per(params[:per_page] || AppConstants::DEFAULT_PAGE_SIZE)
 
-    render json: {
-      messages: messages.map { |msg| serialize_message(msg) },
-      total_count: messages.total_count,
-      current_page: messages.current_page,
-      total_pages: messages.total_pages
-    }
+      render json: {
+        messages: messages.map { |msg|
+          session_id = msg.chat.title.start_with?("session:") ? msg.chat.title.sub("session:", "") : "chat-#{msg.chat.id}"
+          serialize_message_as_chat_message(msg, session_id)
+        },
+        total_count: messages.total_count,
+        current_page: messages.current_page,
+        total_pages: messages.total_pages
+      }
+    end
   end
 
   def sessions
-    # ユニークなセッションIDのリストを取得
-    sessions = current_user.chat_messages
-                           .select(:session_id, "MAX(created_at) as last_message_at", "COUNT(*) as message_count")
-                           .group(:session_id)
-                           .order("last_message_at DESC")
+    # Chatsテーブルからセッション情報を取得
+    chats = current_user.chats
+                        .joins(:messages)
+                        .select("chats.*, MAX(messages.sent_at) as last_message_at, COUNT(messages.id) as message_count")
+                        .group("chats.id")
+                        .order("last_message_at DESC")
 
     render json: {
-      sessions: sessions.map do |session|
-        # セッション内のメッセージから感情を集約
-        session_messages = current_user.chat_messages
-                                      .by_session(session.session_id)
-                                      .where(role: "user")
+      sessions: chats.map do |chat|
+        # session_idを復元
+        session_id = chat.title.start_with?("session:") ? chat.title.sub("session:", "") : "chat-#{chat.id}"
 
-        # 全感情を集計
-        all_emotions = session_messages.pluck(:emotions).flatten.compact
+        # チャット内のメッセージから感情を集約
+        user_messages = Message.where(chat: chat, sender: current_user)
+
+        # 感情情報を集計
+        all_emotions = []
+        user_messages.each do |msg|
+          if msg.emotion_keywords.present?
+            msg.emotion_keywords.each do |keyword|
+              all_emotions << {
+                name: keyword,
+                intensity: msg.emotion_score || 0.5
+              }
+            end
+          end
+        end
+
         emotion_summary = aggregate_emotions(all_emotions)
 
         {
-          session_id: session.session_id,
-          last_message_at: session.last_message_at,
-          message_count: session.message_count,
-          # 最初のメッセージを取得してプレビューとする
-          preview: session_messages.first&.content&.truncate(100),
-          # 感情情報を追加
+          session_id: session_id,
+          chat_id: chat.id,
+          last_message_at: chat.last_message_at,
+          message_count: chat.message_count,
+          preview: user_messages.first&.content&.truncate(100),
           emotions: emotion_summary
         }
       end
@@ -168,7 +246,9 @@ class Api::V1::ChatsController < ApplicationController
   end
 
   def destroy
-    message = current_user.chat_messages.find(params[:id])
+    message = Message.joins(:chat)
+                    .where(chats: { user_id: current_user.id })
+                    .find(params[:id])
     message.destroy!
 
     render json: { message: "Message deleted successfully" }, status: :ok
@@ -179,10 +259,16 @@ class Api::V1::ChatsController < ApplicationController
   def destroy_session
     session_id = params[:id]
 
-    # セッションに属する全てのメッセージを削除
-    deleted_count = current_user.chat_messages.where(session_id: session_id).destroy_all.count
+    # session_idからchatを特定
+    chat = Chat.find_by(title: "session:#{session_id}", user: current_user)
 
-    if deleted_count > 0
+    if chat
+      # chatに属する全てのメッセージを削除
+      deleted_count = Message.where(chat: chat).destroy_all.count
+
+      # chat自体も削除
+      chat.destroy
+
       render json: { message: "Session deleted successfully", deleted_count: deleted_count }, status: :ok
     else
       render json: { error: "Session not found" }, status: :not_found
@@ -202,15 +288,17 @@ class Api::V1::ChatsController < ApplicationController
     SecureRandom.uuid
   end
 
-  def serialize_message(message)
+  def serialize_message_as_chat_message(message, session_id)
     {
       id: message.id,
       content: message.content,
-      role: message.role,
-      session_id: message.session_id,
-      metadata: message.metadata,
-      emotions: message.emotions,
-      created_at: message.created_at,
+      role: message.llm_metadata&.dig("role") || (message.sender_id == current_user.id ? "user" : "assistant"),
+      session_id: session_id,
+      metadata: message.llm_metadata,
+      emotions: message.emotion_keywords&.map { |k|
+        { name: k, intensity: message.emotion_score }
+      },
+      created_at: message.sent_at || message.created_at,
       updated_at: message.updated_at
     }
   end

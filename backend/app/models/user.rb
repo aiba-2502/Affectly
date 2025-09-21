@@ -5,7 +5,6 @@ class User < ApplicationRecord
 
   # Associations
   has_many :chats, dependent: :destroy
-  has_many :chat_messages, dependent: :destroy
   has_many :api_tokens, dependent: :destroy
   has_many :summaries, dependent: :destroy
   has_many :messages, foreign_key: :sender_id, dependent: :destroy  # RDB版メッセージとの関連（送信者として）
