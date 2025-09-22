@@ -106,8 +106,11 @@ class ReportService
       thinkingPatterns: data["thinking_patterns"] || [],
       values: data["values"] || [],
       personalAdvice: data["personal_advice"] || generate_personal_advice,
-      conversationReport: data["conversation_report"] || {},
-      updatedAt: summary.updated_at.iso8601
+      conversationReport: data["conversation_report"] || {
+        week: @analyzers[:conversations].weekly_report,
+        month: @analyzers[:conversations].monthly_report
+      },
+      updatedAt: (summary.updated_at || Time.current).iso8601
     }
   end
 

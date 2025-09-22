@@ -138,23 +138,38 @@ module Reports
     def extract_emotion_keywords(messages)
       return [] if messages.blank?
 
-      emotions = messages.flat_map do |message|
-        message.emotion_keywords || []
+      # 感情と同じメッセージに含まれるキーワードをマッピング
+      emotion_keyword_map = {}
+
+      messages.each do |message|
+        emotions = message.emotion_keywords || []
+        # メッセージからキーワードを抽出
+        keywords = extract_keywords(message.content)
+
+        emotions.each do |emotion|
+          emotion_keyword_map[emotion] ||= []
+          emotion_keyword_map[emotion].concat(keywords)
+        end
       end
 
-      emotion_counts = emotions.group_by(&:itself)
-                              .transform_values(&:count)
-                              .sort_by { |_, count| -count }
-                              .take(5)
+      # 感情ごとにキーワードを集計
+      emotion_keyword_map.map do |emotion, keywords|
+        # キーワードの出現頻度でソートして上位を取得
+        keyword_counts = keywords.group_by(&:itself)
+                                 .transform_values(&:count)
+                                 .sort_by { |_, count| -count }
+                                 .take(5)
+                                 .map { |k, _| k }
 
-      emotion_counts.map do |emotion, count|
+        # 感情タグから日本語ラベルを取得
         tag = Tag.find_by(name: emotion, category: "emotion")
+        emotion_label = tag&.metadata&.dig("label_ja") || emotion
+
         {
-          name: emotion,
-          label: tag&.metadata&.dig("label_ja") || emotion,
-          count: count
+          emotion: emotion_label,
+          keywords: keyword_counts
         }
-      end
+      end.reject { |item| item[:keywords].empty? }
     end
   end
 end

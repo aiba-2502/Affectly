@@ -109,14 +109,18 @@ class Summary < ApplicationRecord
     # 分析済みのデータが存在するかチェック
     analyzed_data_exists = analysis_data.present? && analysis_data["analyzed_at"].present?
 
+    # 開発環境用に要件を緩和
+    required_messages = Rails.env.development? ? 2 : 10
+    required_new_messages = Rails.env.development? ? 2 : 6
+
     if !analyzed_data_exists
-      # 初回分析の条件：10メッセージ（5ラリー）以上
-      total_messages >= 10
+      # 初回分析の条件
+      total_messages >= required_messages
     else
       # 前回分析以降の新規メッセージ数（ユーザーとアシスタントの両方をカウント）
       new_messages = user.messages.where("messages.sent_at > ?", analysis_data["analyzed_at"]).count
-      # 3ラリー（6メッセージ）以上で分析可能
-      new_messages >= 6
+      # 追加分析の条件
+      new_messages >= required_new_messages
     end
   end
 

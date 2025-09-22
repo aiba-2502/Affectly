@@ -411,7 +411,7 @@ export default function ReportPage() {
                           </span>
                           <span className="text-gray-500 mx-2">→</span>
                           <span className="text-gray-600">
-                            {item.keywords.join('、')}
+                            {item.keywords && Array.isArray(item.keywords) ? item.keywords.join('、') : 'キーワードなし'}
                           </span>
                         </div>
                       ))}
