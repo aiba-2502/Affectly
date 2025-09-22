@@ -207,7 +207,7 @@ class ApiToken < ApplicationRecord
 
   def at_least_one_token_present
     if encrypted_access_token.blank? && encrypted_refresh_token.blank?
-      errors.add(:base, "At least one token must be present")
+      errors.add(:base, "少なくとも1つのトークンが必要です")
     end
   end
 end

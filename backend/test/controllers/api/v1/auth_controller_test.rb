@@ -34,7 +34,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
 
     json_response = JSON.parse(@response.body)
-    assert_equal "Invalid email or password", json_response["error"]
+    assert_equal "メールアドレスまたはパスワードが不正です", json_response["error"]
   end
 
   test "should not login with non-existent user" do
@@ -46,7 +46,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
 
     json_response = JSON.parse(@response.body)
-    assert_equal "Invalid email or password", json_response["error"]
+    assert_equal "メールアドレスまたはパスワードが不正です", json_response["error"]
   end
 
   # 新規登録エンドポイントのテスト
@@ -147,7 +147,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
 
     json_response = JSON.parse(@response.body)
-    assert_equal "Invalid or expired refresh token", json_response["error"]
+    assert_equal "無効または期限切れのリフレッシュトークンです", json_response["error"]
   end
 
   test "should not refresh with revoked refresh token" do
@@ -168,7 +168,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     json_response = JSON.parse(@response.body)
     # 無効化されたトークンはトークン再利用として検知される
-    assert_equal "Token reuse detected", json_response["error"]
+    assert_equal "トークンの再利用が検出されました", json_response["error"]
   end
 
   test "should detect token reuse and revoke chain" do
@@ -186,20 +186,20 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # トークンをリフレッシュ（新しいトークンが生成される）
     post api_v1_refresh_url, params: {
-      refresh_token: original_token.raw_token
+      refresh_token: original_token.raw_refresh_token
     }, as: :json
 
     assert_response :success
 
     # 古いトークンを再利用しようとする（トークン再利用攻撃）
     post api_v1_refresh_url, params: {
-      refresh_token: original_token.raw_token
+      refresh_token: original_token.raw_refresh_token
     }, as: :json
 
     assert_response :unauthorized
 
     json_response = JSON.parse(@response.body)
-    assert_equal "Token reuse detected", json_response["error"]
+    assert_equal "トークンの再利用が検出されました", json_response["error"]
 
     # チェーン全体が無効化されていることを確認
     ApiToken.where(token_family_id: token_family_id).each do |token|
@@ -220,7 +220,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     json_response = JSON.parse(@response.body)
-    assert_equal "Logged out successfully", json_response["message"]
+    assert_equal "正常にログアウトしました", json_response["message"]
 
     # アクセストークンが無効化されていることを確認
     access_token.reload
@@ -241,7 +241,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
 
     json_response = JSON.parse(@response.body)
-    assert_equal "Invalid or expired token", json_response["error"]
+    assert_equal "無効または期限切れのトークンです", json_response["error"]
   end
 
   test "should not logout without access token" do
@@ -250,7 +250,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
 
     json_response = JSON.parse(@response.body)
-    assert_equal "Authorization header required", json_response["error"]
+    assert_equal "認証ヘッダーが必要です", json_response["error"]
   end
 
   # 現在のユーザー情報取得のテスト
@@ -272,21 +272,24 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
   test "should not get current user with expired access token" do
     raw_access_token = SecureRandom.hex(32)
+    raw_refresh_token = SecureRandom.hex(32)
     access_token = ApiToken.create!(
       user: @user,
       encrypted_access_token: ApiToken.encrypt_token(raw_access_token),
-      access_expires_at: 1.hour.ago
+      encrypted_refresh_token: ApiToken.encrypt_token(raw_refresh_token),
+      access_expires_at: 1.hour.ago,
+      refresh_expires_at: 7.days.from_now
     )
     access_token.raw_access_token = raw_access_token
 
     get api_v1_me_url, headers: {
-      "Authorization" => "Bearer #{access_token.raw_token}"
+      "Authorization" => "Bearer #{access_token.raw_access_token}"
     }, as: :json
 
     assert_response :unauthorized
 
     json_response = JSON.parse(@response.body)
-    assert_equal "Invalid or expired token", json_response["error"]
+    assert_equal "無効または期限切れのトークンです", json_response["error"]
   end
 
   # レート制限のテスト
@@ -307,7 +310,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       assert_response :too_many_requests
 
       json_response = JSON.parse(@response.body)
-      assert_equal "Too many requests. Please try again later.", json_response["error"]
+      assert_equal "リクエストが多すぎます。しばらくしてからお試しください。", json_response["error"]
     ensure
       # 元のキャッシュストアに戻す
       Rails.cache = original_cache_store

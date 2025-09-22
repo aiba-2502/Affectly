@@ -8,13 +8,9 @@ class Api::V1::ChatsControllerCreateTest < ActionDispatch::IntegrationTest
       password: "password123"
     )
 
-    # JWTトークン生成
-    payload = {
-      user_id: @user.id,
-      exp: 1.hour.from_now.to_i
-    }
-    jwt_secret = ENV["JWT_SECRET_KEY"] || JsonWebToken::SECRET_KEY
-    @token = JWT.encode(payload, jwt_secret, "HS256")
+    # ApiTokenを使用した認証
+    tokens = ApiToken.generate_token_pair(@user)
+    @token = tokens[:access_token].raw_token
   end
 
   test "should create chat message without ChatSessionService" do
@@ -45,11 +41,15 @@ class Api::V1::ChatsControllerCreateTest < ActionDispatch::IntegrationTest
     # データベースの確認
     chat = Chat.find_by(title: "session:#{session_id}", user: @user)
     assert_not_nil chat
-    assert_equal 1, chat.messages.count
+    assert_equal 2, chat.messages.count  # User message and assistant message
 
-    message = chat.messages.first
-    assert_equal "テストメッセージです", message.content
-    assert_equal @user.id, message.sender_id
+    user_message = chat.messages.find_by(sender_kind: Message::SENDER_USER)
+    assert_not_nil user_message
+    assert_equal "テストメッセージです", user_message.content
+    assert_equal @user.id, user_message.sender_id
+
+    assistant_message = chat.messages.find_by(sender_kind: Message::SENDER_ASSISTANT)
+    assert_not_nil assistant_message
   end
 
   test "should find existing chat for same session_id" do

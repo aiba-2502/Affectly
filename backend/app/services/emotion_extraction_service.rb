@@ -14,7 +14,7 @@ class EmotionExtractionService
     # 感情の強度を計算して返す
     emotions.select { |e| e[:intensity] >= 0.3 }
   rescue StandardError => e
-    Rails.logger.error "Emotion extraction failed: #{e.message}"
+    Rails.logger.error "感情抽出エラー: #{e.message}"
     # エラー時は簡易的な感情分析を行う
     fallback_emotion_detection(message_content)
   end
@@ -104,7 +104,7 @@ class EmotionExtractionService
       }
     end
   rescue JSON::ParserError => e
-    Rails.logger.error "Failed to parse emotion JSON: #{e.message}"
+    Rails.logger.error "感情JSONパースエラー: #{e.message}"
     []
   end
 

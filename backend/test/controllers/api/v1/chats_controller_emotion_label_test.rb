@@ -55,7 +55,7 @@ class Api::V1::ChatsControllerEmotionLabelTest < ActionDispatch::IntegrationTest
       sender: @user,
       content: "テストメッセージ",
       sender_kind: Message::SENDER_USER,
-      emotion_keywords: ["joy", "sadness"],
+      emotion_keywords: [ "joy", "sadness" ],
       emotion_score: 0.7,
       sent_at: Time.current
     )
@@ -96,7 +96,7 @@ class Api::V1::ChatsControllerEmotionLabelTest < ActionDispatch::IntegrationTest
       sender: @user,
       content: "嬉しいメッセージ",
       sender_kind: Message::SENDER_USER,
-      emotion_keywords: ["joy"],
+      emotion_keywords: [ "joy" ],
       emotion_score: 0.8,
       sent_at: Time.current
     )
@@ -106,7 +106,7 @@ class Api::V1::ChatsControllerEmotionLabelTest < ActionDispatch::IntegrationTest
       sender: @user,
       content: "悲しいメッセージ",
       sender_kind: Message::SENDER_USER,
-      emotion_keywords: ["sadness"],
+      emotion_keywords: [ "sadness" ],
       emotion_score: 0.6,
       sent_at: Time.current
     )
@@ -145,7 +145,7 @@ class Api::V1::ChatsControllerEmotionLabelTest < ActionDispatch::IntegrationTest
       sender: @user,
       content: "テストメッセージ",
       sender_kind: Message::SENDER_USER,
-      emotion_keywords: ["unknown_emotion"],
+      emotion_keywords: [ "unknown_emotion" ],
       emotion_score: 0.5,
       sent_at: Time.current
     )

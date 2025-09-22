@@ -1,0 +1,811 @@
+class ReportService
+  attr_reader :user, :openai_service
+
+  def initialize(user)
+    @user = user
+    @openai_service = OpenaiService.new
+    @emotion_service = EmotionExtractionService.new
+  end
+
+  def generate_report
+    # 既存の分析結果を取得
+    existing_summary = find_or_create_current_summary
+
+    # 新規メッセージがあるかチェック
+    if existing_summary.needs_new_analysis?
+      # 前回分析からのメッセージ数を取得
+      messages_count = existing_summary.messages_since_analysis
+
+      # 分析が必要であることを通知（既存データも返す）
+      {
+        needsAnalysis: true,
+        lastAnalyzedAt: existing_summary.analysis_data["analyzed_at"] || existing_summary.updated_at,
+        existingData: parse_existing_analysis(existing_summary),
+        message: "新しいメッセージが追加されました。AI分析を実行できます。",
+        messagesSinceAnalysis: messages_count
+      }
+    else
+      # 既存の分析結果を返す（分析不要の状態も返す）
+      result = parse_existing_analysis(existing_summary)
+      result[:needsAnalysis] = false
+      result[:lastAnalyzedAt] = existing_summary.analysis_data["analyzed_at"] || existing_summary.updated_at
+      result
+    end
+  end
+
+  # 手動分析実行
+  def execute_analysis
+    Rails.logger.info "Executing AI analysis for user #{user.id}"
+
+    # AI分析を実行
+    analysis_result = {
+      userId: user.id.to_s,
+      userName: user.name,
+      strengths: generate_strengths,
+      thinkingPatterns: generate_thinking_patterns,
+      values: generate_values,
+      personalAdvice: generate_personal_advice, # パーソナルアドバイスを追加
+      conversationReport: {
+        week: generate_weekly_conversation_report,
+        month: generate_monthly_conversation_report
+      },
+      updatedAt: Time.current.iso8601
+    }
+
+    # 分析結果をsummariesテーブルに保存
+    save_analysis_to_summary(analysis_result)
+
+    analysis_result
+  end
+
+  def generate_weekly_report
+    generate_period_report(1.week.ago)
+  end
+
+  def generate_monthly_report
+    generate_period_report(1.month.ago)
+  end
+
+  private
+
+  def generate_strengths
+    # 会話履歴からユーザーの強みを分析
+    recent_messages = user.messages
+                         .joins(:chat)
+                         .where("messages.sent_at >= ?", 1.month.ago)
+                         .limit(20)
+                         .pluck(:content)
+
+    if recent_messages.present?
+      analyze_user_strengths_with_ai(recent_messages)
+    else
+      # デフォルトの強み
+      [
+        { id: SecureRandom.uuid, title: "成長意欲", description: "新しいことを学ぶ意欲があり、継続的な成長を目指しています。" },
+        { id: SecureRandom.uuid, title: "内省力", description: "自分の考えや感情を振り返り、深く理解する力があります。" },
+        { id: SecureRandom.uuid, title: "対話力", description: "AIとの対話を通じて、自分の考えを整理し表現する能力があります。" }
+      ]
+    end
+  end
+
+  def generate_thinking_patterns
+    # 会話履歴から思考パターンを分析
+    recent_messages = user.messages
+                         .joins(:chat)
+                         .where("messages.sent_at >= ?", 1.month.ago)
+                         .limit(20)
+                         .pluck(:content)
+
+    if recent_messages.present?
+      analyze_thinking_patterns_with_ai(recent_messages)
+    else
+      # デフォルトの思考パターン
+      [
+        { id: SecureRandom.uuid, title: "探求型思考", description: "疑問を持ち、答えを探求する思考パターンがあります。" },
+        { id: SecureRandom.uuid, title: "整理型思考", description: "情報や感情を整理して理解する傾向があります。" }
+      ]
+    end
+  end
+
+  def generate_values
+    # 会話履歴から価値観を分析
+    recent_messages = user.messages
+                         .joins(:chat)
+                         .where("messages.sent_at >= ?", 1.month.ago)
+                         .limit(20)
+                         .pluck(:content)
+
+    Rails.logger.info "Generating values for user #{user.id}"
+    Rails.logger.info "Recent messages count: #{recent_messages.length}"
+
+    if recent_messages.present?
+      values = analyze_user_values_with_ai(recent_messages)
+      Rails.logger.info "Generated #{values.length} values"
+      values
+    else
+      Rails.logger.info "No recent messages, using default values"
+      # デフォルトの価値観
+      [
+        { id: SecureRandom.uuid, title: "自己理解", description: "自分自身を深く理解することを大切にしています。" },
+        { id: SecureRandom.uuid, title: "成長", description: "継続的な学習と成長を重視しています。" }
+      ]
+    end
+  end
+
+  # パーソナルアドバイス生成（手動実行時のみ）
+  def generate_personal_advice
+    messages = user.messages
+                   .joins(:chat)
+                   .where("messages.sent_at >= ?", 1.month.ago)
+                   .limit(50) # より多くのコンテキストを使用
+                   .pluck(:content)
+
+    Rails.logger.info "Generating personal advice for user #{user.id}"
+
+    if messages.present?
+      analyze_personal_advice_with_ai(messages)
+    else
+      # メッセージがない場合はnilを返す
+      nil
+    end
+  end
+
+  def generate_weekly_conversation_report
+    generate_period_report(1.week.ago, "week")
+  end
+
+  def generate_monthly_conversation_report
+    generate_period_report(1.month.ago, "month")
+  end
+
+  def generate_period_report(start_date, period = nil)
+    # 指定期間の会話履歴を取得（Messagesテーブルを使用）
+    messages = user.messages.joins(:chat).where("messages.sent_at >= ?", start_date)
+
+    # 会話内容を分析
+    analyzed_data = analyze_conversations(messages)
+
+    {
+      period: period || (start_date == 1.week.ago ? "week" : "month"),
+      summary: generate_report_text(analyzed_data),
+      frequentKeywords: extract_frequent_keywords(messages),
+      emotionKeywords: extract_emotion_keywords(messages)
+    }
+  end
+
+  def analyze_conversations(messages)
+    # 会話データを分析
+    topics = []
+    emotions = []
+    message_count = 0
+
+    # ユーザーメッセージのみを分析対象とする（senderがuserのもの）
+    user_messages = messages.where(sender_id: user.id)
+
+    user_messages.each do |message|
+      # トピックと感情を抽出
+      if message.content.present?
+        topics << extract_topics(message.content)
+        emotions << extract_emotions(message.content)
+        message_count += 1
+      end
+    end
+
+    {
+      topics: topics.flatten.compact,
+      emotions: emotions.flatten.compact,
+      message_count: message_count
+    }
+  end
+
+  def generate_report_text(analyzed_data)
+    # 分析データから要約文を生成
+    if analyzed_data[:message_count] == 0
+      "この期間の会話履歴はありません。"
+    else
+      # トピックの集計と分析
+      if analyzed_data[:topics].any?
+        topic_counts = analyzed_data[:topics].each_with_object(Hash.new(0)) { |topic, hash| hash[topic] += 1 }
+        main_topics = topic_counts.sort_by { |_, count| -count }.take(3).map(&:first)
+      else
+        main_topics = []
+      end
+
+      # 感情の集計と分析
+      if analyzed_data[:emotions].any?
+        emotion_counts = analyzed_data[:emotions].each_with_object(Hash.new(0)) { |emotion, hash| hash[emotion] += 1 }
+        main_emotions = emotion_counts.sort_by { |_, count| -count }.take(2).map(&:first)
+      else
+        main_emotions = []
+      end
+
+      # サマリー生成
+      summary = ""
+
+      if main_topics.any?
+        topics_text = main_topics.join("、")
+        summary += "この期間は#{topics_text}について主に話していました。"
+      end
+
+      # 感情に基づく状態の説明
+      if main_emotions.any?
+        emotion_text = case main_emotions.first
+        when "喜び"
+          "前向きな気持ちで日々を過ごされているようです。"
+        when "悲しみ"
+          "慈悲深いことがあったようですが、前を向いていらっしゃいます。"
+        when "怒り"
+          "ストレスを感じる出来事があったようですが、前向きに対処されています。"
+        when "不安"
+          "不確実な状況に対して慎重に対応されているようです。"
+        when "期待"
+          "新しいチャンスや可能性にワクワクされているようです。"
+        when "疲れ"
+          "忙しい日々をお過ごしのようですが、頑張っていらっしゃいます。"
+        when "満足"
+          "目標達成や成果に充実感を感じていらっしゃいます。"
+        else
+          "様々な感情を経験しながらお過ごしのようです。"
+        end
+        summary += emotion_text
+      end
+
+      # メッセージ数に基づく追加情報
+      if analyzed_data[:message_count] >= 10
+        summary += "AIとの積極的な対話を通じて、自己理解が深まっています。"
+      elsif analyzed_data[:message_count] >= 5
+        summary += "AIとの対話を通じて、新たな気づきを得られています。"
+      elsif main_topics.empty? && main_emotions.empty?
+        summary = "さらに対話を続けることで、より詳細な分析が可能になります。"
+      else
+        summary += "さらに対話を続けることで、より深い分析が可能になります。"
+      end
+
+      summary.presence || "この期間の会話データを分析中です。"
+    end
+  end
+
+  def extract_frequent_keywords(messages)
+    keyword_counts = Hash.new(0)
+
+    # ユーザーメッセージのみを対象とする
+    user_messages = messages.where(sender_id: user.id)
+
+    user_messages.each do |message|
+      next unless message.content.present?
+      # キーワード抽出（MeCabが利用可能な場合は使用）
+      keywords = extract_keywords_from_text(message.content)
+      keywords.each { |keyword| keyword_counts[keyword] += 1 }
+    end
+
+    # 頻出順にソートして上位を返す
+    keyword_counts.sort_by { |_, count| -count }.take(5).map do |keyword, count|
+      { keyword: keyword, count: count }
+    end
+  end
+
+  def extract_emotion_keywords(messages)
+    emotion_keywords_map = {}
+
+    # ユーザーメッセージのみを対象とする
+    user_messages = messages.where(sender_id: user.id)
+
+    user_messages.each do |message|
+      next unless message.content.present?
+
+      # 複数の感情を検出
+      emotions = detect_multiple_emotions(message.content)
+      keywords = extract_keywords_from_text(message.content)
+
+      # 各感情に対してキーワードを関連付け
+      emotions.each do |emotion|
+        next if emotion == "その他" # その他は除外
+
+        emotion_keywords_map[emotion] ||= []
+        emotion_keywords_map[emotion].concat(keywords.take(5)) # 各メッセージから最大5個のキーワードを取得
+      end
+    end
+
+    # 各感情に関連するキーワードを集計してソート
+    result = []
+    emotion_keywords_map.each do |emotion, keywords|
+      # キーワードの出現回数を集計
+      keyword_counts = Hash.new(0)
+      keywords.each { |keyword| keyword_counts[keyword] += 1 }
+
+      # 頻出順にソートして上位を取得
+      top_keywords = keyword_counts.sort_by { |_, count| -count }.take(5).map(&:first)
+
+      if top_keywords.any?
+        result << {
+          emotion: emotion,
+          keywords: top_keywords
+        }
+      end
+    end
+
+    # 最大5つの感情-キーワード相関を返す
+    result.sort_by { |item| -item[:keywords].size }.take(5)
+  end
+
+  def extract_topics(text)
+    # テキストからトピックを抽出（簡易実装）
+    # 実際はNLPや形態素解析を使用
+    topics = []
+    topics << "仕事" if text.include?("仕事") || text.include?("業務")
+    topics << "人間関係" if text.include?("友達") || text.include?("家族")
+    topics << "健康" if text.include?("健康") || text.include?("体調")
+    topics << "趣味" if text.include?("趣味") || text.include?("楽しい")
+    topics
+  end
+
+  def extract_emotions(text)
+    # Use EmotionExtractionService for emotion detection
+    emotions = @emotion_service.extract_emotions(text)
+
+    # Convert to Japanese labels
+    emotion_tags = Tag.where(category: "emotion")
+    emotions.map do |emotion_data|
+      tag = emotion_tags.find { |t| t.name == emotion_data[:name].to_s }
+      tag&.metadata&.dig("label_ja") || emotion_data[:name].to_s
+    end.compact
+  end
+
+  def extract_keywords_from_text(text)
+    # テキストからキーワードを抽出（改善版）
+    # 日本語の助詞、助動詞、記号などを除去
+    common_words = [
+      "です", "ます", "ました", "でした", "こと", "もの", "これ", "それ", "あれ", "どれ",
+      "する", "した", "して", "いる", "いた", "ある", "あった", "なる", "なった", "いう",
+      "ない", "なかった", "れる", "られる", "ため", "から", "まで", "より", "ので", "のに",
+      "けど", "けれど", "しかし", "でも", "だから", "ところ", "とき", "もう", "まだ", "ちょうど",
+      "とても", "すごく", "ちょっと", "少し", "かなり", "本当", "本当に", "たぶん", "きっと",
+      "よく", "あまり", "全然", "ぜんぜん", "そんな", "こんな", "あんな", "どんな",
+      "みたい", "よう", "そう", "らしい", "みんな", "だけ", "ばかり", "など", "たち",
+      "さん", "くん", "ちゃん", "様", "さま", "方", "かた", "やつ", "もん",
+      "わけ", "はず", "つもり", "予定", "よって", "って", "んだ", "んです", "のです",
+      "思う", "思い", "思っ", "思います", "考える", "考え", "感じ", "感じる", "言う", "言い",
+      "見る", "見て", "聞く", "聞い", "行く", "行っ", "来る", "来て", "帰る", "帰っ",
+      "今日", "明日", "昨日", "今", "さっき", "あと", "前", "後", "最近", "いつも",
+      "自分", "私", "僕", "俺", "あなた", "彼", "彼女", "それぞれ", "ずつ",
+      "もっと", "さらに", "また", "まあ", "ええ", "はい", "いいえ", "うん", "ううん"
+    ]
+
+    # 記号と改行を削除し、句読点で分割
+    words = text.gsub(/[\r\n\t]/, " ")
+                .gsub(/[。、！？「」『』（）【】・…]/, " ")
+                .split(/\s+/)
+
+    # 2文字以上で一般的でない単語を抽出
+    meaningful_words = words.reject { |w|
+      w.length < 2 ||
+      w.length > 20 || # 異常に長い単語も除外
+      common_words.include?(w) ||
+      common_words.include?(w.downcase) ||
+      w.match?(/^[ぁ-ん]{1,2}$/) || # 短いひらがなは除外
+      w.match?(/^[0-9０-９]+$/) ||   # 数字のみは除外
+      w.match?(/^[a-zA-Z]{1,2}$/) || # 短い英字は除外
+      w.match?(/^[^\p{Han}\p{Hiragana}\p{Katakana}\w]+$/) # 記号のみは除外
+    }.uniq
+
+    # 頻出する重要そうな単語を優先（出現回数を考慮）
+    word_counts = Hash.new(0)
+    meaningful_words.each { |word| word_counts[word] += 1 }
+    word_counts.sort_by { |_, count| -count }.take(15).map(&:first)
+  end
+
+  def detect_emotion(text)
+    # Use EmotionExtractionService for emotion detection
+    emotions = @emotion_service.extract_emotions(text)
+    return "その他" if emotions.empty?
+
+    # Get the primary emotion (highest intensity)
+    primary = emotions.max_by { |e| e[:intensity] || 0.5 }
+
+    # Convert to Japanese label
+    tag = Tag.find_by(name: primary[:name].to_s, category: "emotion")
+    tag&.metadata&.dig("label_ja") || "その他"
+  end
+
+  private
+
+  def detect_multiple_emotions(text)
+    # Use EmotionExtractionService for emotion detection
+    emotions = @emotion_service.extract_emotions(text)
+    return [ "その他" ] if emotions.empty?
+
+    # Convert to Japanese labels
+    emotion_tags = Tag.where(category: "emotion")
+    japanese_emotions = emotions.map do |emotion_data|
+      tag = emotion_tags.find { |t| t.name == emotion_data[:name].to_s }
+      tag&.metadata&.dig("label_ja")
+    end.compact.uniq
+
+    japanese_emotions.empty? ? [ "その他" ] : japanese_emotions
+  end
+
+  # Fallback methods when AI analysis fails
+  def fallback_user_strengths
+    [
+      { id: SecureRandom.uuid, title: "成長意欲", description: "新しいことを学ぶ意欲があり、継続的な成長を目指しています。" },
+      { id: SecureRandom.uuid, title: "内省力", description: "自分の考えや感情を振り返り、深く理解する力があります。" },
+      { id: SecureRandom.uuid, title: "対話力", description: "AIとの対話を通じて、自分の考えを整理し表現する能力があります。" }
+    ]
+  end
+
+  def fallback_thinking_patterns
+    [
+      { id: SecureRandom.uuid, title: "探求型思考", description: "疑問を持ち、答えを探求する思考パターンがあります。" },
+      { id: SecureRandom.uuid, title: "整理型思考", description: "情報や感情を整理して理解する傾向があります。" }
+    ]
+  end
+
+  def fallback_user_values
+    [
+      { id: SecureRandom.uuid, title: "自己理解", description: "自分自身を深く理解することを大切にしています。" },
+      { id: SecureRandom.uuid, title: "成長", description: "継続的な学習と成長を重視しています。" }
+    ]
+  end
+
+  # AI分析メソッド
+  def analyze_user_strengths_with_ai(messages)
+    begin
+      prompt = build_analysis_prompt(messages, "strengths")
+
+      ai_messages = [
+        { role: "system", content: analysis_system_prompt },
+        { role: "user", content: prompt }
+      ]
+
+      response = openai_service.chat(ai_messages, temperature: 0.7, max_tokens: 800)
+      parsed_response = parse_ai_response(response["content"])
+
+      # 強みのフォーマットに変換
+      if parsed_response && parsed_response["strengths"]
+        parsed_response["strengths"].map do |strength|
+          {
+            id: SecureRandom.uuid,
+            title: strength["title"],
+            description: strength["description"]
+          }
+        end.take(3)
+      else
+        # フォールバック
+        fallback_user_strengths()
+      end
+    rescue => e
+      Rails.logger.error "AI analysis error for strengths: #{e.message}"
+      # フォールバック
+      fallback_user_strengths()
+    end
+  end
+
+  def analyze_thinking_patterns_with_ai(messages)
+    begin
+      prompt = build_analysis_prompt(messages, "thinking_patterns")
+
+      ai_messages = [
+        { role: "system", content: analysis_system_prompt },
+        { role: "user", content: prompt }
+      ]
+
+      response = openai_service.chat(ai_messages, temperature: 0.7, max_tokens: 600)
+      parsed_response = parse_ai_response(response["content"])
+
+      if parsed_response && parsed_response["thinking_patterns"]
+        parsed_response["thinking_patterns"].map do |pattern|
+          {
+            id: SecureRandom.uuid,
+            title: pattern["title"],
+            description: pattern["description"]
+          }
+        end.take(2)
+      else
+        fallback_thinking_patterns()
+      end
+    rescue => e
+      Rails.logger.error "AI analysis error for thinking patterns: #{e.message}"
+      fallback_thinking_patterns()
+    end
+  end
+
+  def analyze_user_values_with_ai(messages)
+    begin
+      prompt = build_analysis_prompt(messages, "values")
+
+      ai_messages = [
+        { role: "system", content: analysis_system_prompt },
+        { role: "user", content: prompt }
+      ]
+
+      response = openai_service.chat(ai_messages, temperature: 0.7, max_tokens: 800)
+      parsed_response = parse_ai_response(response["content"])
+
+      if parsed_response && parsed_response["values"]
+        parsed_response["values"].map do |value|
+          {
+            id: SecureRandom.uuid,
+            title: value["title"],
+            description: value["description"]
+          }
+        end.take(3)
+      else
+        fallback_user_values()
+      end
+    rescue => e
+      Rails.logger.error "AI analysis error for values: #{e.message}"
+      fallback_user_values()
+    end
+  end
+
+  # パーソナルアドバイスをAIで生成
+  def analyze_personal_advice_with_ai(messages)
+    prompt = build_personal_advice_prompt(messages)
+
+    ai_messages = [
+      { role: "system", content: personal_advice_system_prompt },
+      { role: "user", content: prompt }
+    ]
+
+    response = openai_service.chat(
+      ai_messages,
+      temperature: 0.8, # より創造的な回答のため高めに設定
+      max_tokens: 1200
+    )
+
+    parse_personal_advice_response(response)
+  rescue => e
+    Rails.logger.error "Personal advice generation failed: #{e.message}"
+    nil
+  end
+
+  # パーソナルアドバイス用のプロンプト構築
+  def build_personal_advice_prompt(messages)
+    messages_text = messages.take(50).join("\n---\n")
+
+    <<~PROMPT
+      以下の会話履歴から、このユーザーに対する個別のアドバイスを生成してください。
+
+      会話履歴：
+      #{messages_text}
+
+      以下のJSON形式で回答してください：
+      {
+        "emotional_patterns": {
+          "summary": "感情パターンの総括（100字以内）",
+          "details": ["具体的なパターン1", "具体的なパターン2"]
+        },
+        "core_values": {
+          "summary": "価値観の軸の総括（100字以内）",
+          "pillars": ["価値観の柱1", "価値観の柱2", "価値観の柱3"]
+        },
+        "action_guidelines": {
+          "career": "キャリアに関するアドバイス（150字以内）",
+          "relationships": "人間関係に関するアドバイス（150字以内）",
+          "life_philosophy": "生き方に関するアドバイス（150字以内）"
+        },
+        "personal_axis": "あなたの「軸」を一言で表すと（30字以内）"
+      }
+    PROMPT
+  end
+
+  # パーソナルアドバイス用のシステムプロンプト
+  def personal_advice_system_prompt
+    <<~SYSTEM
+      あなたはユーザーの会話履歴を分析し、その人の人生をより良くするための具体的で実用的なアドバイスを提供する心理カウンセラー兼キャリアコーチです。
+
+      以下の観点から分析を行い、ユーザーが自分の「軸」を理解し、より良い意思決定ができるようサポートしてください：
+
+      1. 感情パターン：どんな状況でどんな感情を抱きやすいか
+      2. 価値観の軸：何を大切にして生きているか
+      3. 強みと成長機会：活かすべき強みと伸ばすべき領域
+      4. 具体的な行動指針：キャリア、人間関係、生き方における実践的アドバイス
+
+      アドバイスは具体的で、実践可能で、ポジティブな表現を心がけてください。
+      ユーザーの成長と幸福を第一に考え、押し付けがましくならないよう配慮してください。
+    SYSTEM
+  end
+
+  # パーソナルアドバイスのレスポンス解析
+  def parse_personal_advice_response(response)
+    content = response.dig("choices", 0, "message", "content") || response["content"] || "{}"
+    advice = JSON.parse(content)
+
+    # デフォルト値を取得
+    defaults = default_personal_advice
+
+    # キャメルケースに変換して返す（適切なデフォルト構造を保証）
+    {
+      emotionalPatterns: {
+        summary: advice.dig("emotional_patterns", "summary") || defaults[:emotionalPatterns][:summary],
+        details: advice.dig("emotional_patterns", "details") || defaults[:emotionalPatterns][:details]
+      },
+      coreValues: {
+        summary: advice.dig("core_values", "summary") || defaults[:coreValues][:summary],
+        pillars: advice.dig("core_values", "pillars") || defaults[:coreValues][:pillars]
+      },
+      actionGuidelines: {
+        career: advice.dig("action_guidelines", "career") || defaults[:actionGuidelines][:career],
+        relationships: advice.dig("action_guidelines", "relationships") || defaults[:actionGuidelines][:relationships],
+        lifePhilosophy: advice.dig("action_guidelines", "life_philosophy") || defaults[:actionGuidelines][:lifePhilosophy]
+      },
+      personalAxis: advice["personal_axis"] || defaults[:personalAxis]
+    }
+  rescue JSON::ParserError => e
+    Rails.logger.error "Failed to parse personal advice JSON: #{e.message}"
+    nil
+  end
+
+  # デフォルトのパーソナルアドバイス
+  def default_personal_advice
+    {
+      emotionalPatterns: {
+        summary: "感情を言語化し、自己理解を深めていく過程にあります。",
+        details: [
+          "新しいことへの挑戦に対して前向きな姿勢を持っています",
+          "困難な状況でも冷静に対処しようとする傾向があります"
+        ]
+      },
+      coreValues: {
+        summary: "成長と調和を大切にしながら、着実に前進しています。",
+        pillars: [ "継続的な成長", "自己理解", "意味のある貢献" ]
+      },
+      actionGuidelines: {
+        career: "あなたの学習意欲と分析力を活かせる環境で、段階的にスキルを磨いていくことをお勧めします。",
+        relationships: "相手の立場を理解しながらも、自分の考えを明確に伝えることでより良い関係が築けるでしょう。",
+        lifePhilosophy: "完璧を求めすぎず、小さな進歩を積み重ねることで、持続可能な成長を実現できます。"
+      },
+      personalAxis: "成長と調和を大切にする実践者"
+    }
+  end
+
+  def analysis_system_prompt
+    <<~PROMPT
+      あなたはユーザーの会話履歴を分析し、その人の特性を深く理解する心理分析の専門家です。
+      ユーザーの発言から、その人固有の強み、思考パターン、価値観を見出してください。
+
+      分析の際は以下の点に注意してください：
+      1. 表面的な内容だけでなく、言葉の選び方や表現方法から深層心理を読み取る
+      2. 一般的な特性ではなく、そのユーザー特有の個性を見つける
+      3. ポジティブで建設的な表現を使用する
+      4. 具体的で実践的な内容にする
+
+      必ずJSON形式で回答してください。
+    PROMPT
+  end
+
+  def build_analysis_prompt(messages, analysis_type)
+    messages_text = messages.take(20).join("\n---\n")
+
+    case analysis_type
+    when "strengths"
+      <<~PROMPT
+        以下のユーザーの会話履歴を分析し、この人の「強み」を3つ特定してください。
+        強みは、その人の能力、資質、潜在的な才能を表すものです。
+
+        会話履歴：
+        #{messages_text}
+
+        以下のJSON形式で回答してください：
+        {
+          "strengths": [
+            {
+              "title": "強みのタイトル（10文字以内）",
+              "description": "その強みの詳細な説明（50文字以内）"
+            }
+          ]
+        }
+
+        必ず3つの強みを含めてください。
+      PROMPT
+    when "thinking_patterns"
+      <<~PROMPT
+        以下のユーザーの会話履歴を分析し、この人の「思考パターン」を2つ特定してください。
+        思考パターンは、物事を考える際の特徴的な傾向や方法を表すものです。
+
+        会話履歴：
+        #{messages_text}
+
+        以下のJSON形式で回答してください：
+        {
+          "thinking_patterns": [
+            {
+              "title": "思考パターンのタイトル（10文字以内）",
+              "description": "その思考パターンの詳細な説明（50文字以内）"
+            }
+          ]
+        }
+
+        必ず2つの思考パターンを含めてください。
+      PROMPT
+    when "values"
+      <<~PROMPT
+        以下のユーザーの会話履歴を分析し、この人の「価値観」を3つ特定してください。
+        価値観は、その人が人生で大切にしているものや信念を表すものです。
+
+        会話履歴：
+        #{messages_text}
+
+        以下のJSON形式で回答してください：
+        {
+          "values": [
+            {
+              "title": "価値観のタイトル（10文字以内）",
+              "description": "その価値観の詳細な説明（50文字以内）"
+            }
+          ]
+        }
+
+        必ず3つの価値観を含めてください。
+      PROMPT
+    end
+  end
+
+  def parse_ai_response(content)
+    # JSONを抽出して解析
+    json_match = content.match(/\{.*\}/m)
+    if json_match
+      begin
+        JSON.parse(json_match[0])
+      rescue JSON::ParserError => e
+        Rails.logger.error "JSON parse error: #{e.message}"
+        nil
+      end
+    else
+      nil
+    end
+  end
+
+  # 現在の月次サマリーを取得または作成
+  def find_or_create_current_summary
+    Summary.find_or_create_by(
+      user_id: user.id,
+      period: "monthly",
+      tally_start_at: Time.current.beginning_of_month
+    ) do |summary|
+      summary.tally_end_at = Time.current.end_of_month
+      summary.analysis_data = {
+        strengths: [],
+        thinking_patterns: [],
+        values: [],
+        analyzed_at: nil
+      }
+    end
+  end
+
+  # 分析結果をsummariesテーブルに保存
+  def save_analysis_to_summary(analysis)
+    summary = find_or_create_current_summary
+
+    summary.update!(
+      analysis_data: {
+        strengths: analysis[:strengths],
+        thinking_patterns: analysis[:thinkingPatterns],
+        values: analysis[:values],
+        personal_advice: analysis[:personalAdvice],
+        conversation_report: analysis[:conversationReport],
+        analyzed_at: Time.current
+      }
+    )
+  end
+
+  # 既存の分析結果をパース
+  def parse_existing_analysis(summary)
+    data = summary.analysis_data || {}
+
+    {
+      userId: user.id.to_s,
+      userName: user.name,
+      strengths: data["strengths"] || [],
+      thinkingPatterns: data["thinking_patterns"] || [],
+      values: data["values"] || [],
+      personalAdvice: data["personal_advice"],
+      conversationReport: data["conversation_report"] || {
+        week: generate_weekly_conversation_report,
+        month: generate_monthly_conversation_report
+      },
+      updatedAt: summary.updated_at.iso8601,
+      analyzedAt: data["analyzed_at"]
+    }
+  end
+end

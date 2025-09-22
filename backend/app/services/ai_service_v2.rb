@@ -81,8 +81,8 @@ class AiServiceV2
       "provider" => "openai"
     }
   rescue => e
-    Rails.logger.error "OpenAI Error: #{e.message}"
-    raise "OpenAI API error: #{e.message}"
+    Rails.logger.error "OpenAIエラー: #{e.message}"
+    raise "OpenAI APIエラー: #{e.message}"
   end
 
   def anthropic_chat(messages, model:, temperature:, max_tokens:)
@@ -121,8 +121,8 @@ class AiServiceV2
       "provider" => "anthropic"
     }
   rescue => e
-    Rails.logger.error "Anthropic Error: #{e.message}"
-    raise "Anthropic API error: #{e.message}"
+    Rails.logger.error "Anthropicエラー: #{e.message}"
+    raise "Anthropic APIエラー: #{e.message}"
   end
 
   def google_chat(messages, model:, temperature:, max_tokens:)
@@ -172,8 +172,8 @@ class AiServiceV2
       "provider" => "google"
     }
   rescue => e
-    Rails.logger.error "Google Gemini Error: #{e.message}"
-    raise "Google Gemini API error: #{e.message}"
+    Rails.logger.error "Google Geminiエラー: #{e.message}"
+    raise "Google Gemini APIエラー: #{e.message}"
   end
 
   def default_system_prompt
@@ -182,7 +182,7 @@ class AiServiceV2
     env_prompts = prompts_config[Rails.env] || prompts_config["default"]
     env_prompts["system_prompt"]
   rescue => e
-    Rails.logger.error "Failed to load prompts.yml: #{e.message}"
-    raise "System prompt configuration not found. Please check config/prompts.yml"
+    Rails.logger.error "prompts.ymlの読み込みエラー: #{e.message}"
+    raise "システムプロンプト設定が見つかりません。config/prompts.ymlを確認してください"
   end
 end

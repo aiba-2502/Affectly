@@ -22,6 +22,7 @@ class CleanupVerificationTest < ActiveSupport::TestCase
       chat: chat,
       sender: @user,
       content: "Test message",
+      sender_kind: Message::SENDER_USER,
       sent_at: Time.current
     )
 
@@ -42,6 +43,7 @@ class CleanupVerificationTest < ActiveSupport::TestCase
       chat: chat,
       sender: @user,
       content: "Test content for report",
+      sender_kind: Message::SENDER_USER,
       emotion_score: 0.7,
       emotion_keywords: [ "happy" ],
       sent_at: 1.day.ago

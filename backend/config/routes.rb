@@ -22,9 +22,6 @@ Rails.application.routes.draw do
       get "users/me", to: "users#me"
       patch "users/me", to: "users#update"
 
-      # Information routes
-      get "information", to: "information#index"
-
       # Chat routes
       resources :chats, only: [ :create, :index, :destroy ] do
         collection do

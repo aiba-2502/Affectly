@@ -11,24 +11,26 @@ class ApiTokenValidatorTest < ActiveSupport::TestCase
 
   # トークン再利用検知のテスト
   test "should detect token reuse" do
-     token_family_id = SecureRandom.uuid
+    token_family_id = SecureRandom.uuid
 
     # 有効なリフレッシュトークン
     valid_token = ApiToken.create!(
       user: @user,
-      token_kind: "refresh",
-      encrypted_token: SecureRandom.urlsafe_base64(32),
-      expires_at: 7.days.from_now,
-       token_family_id:  token_family_id
+      encrypted_access_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+      encrypted_refresh_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+      access_expires_at: 2.hours.from_now,
+      refresh_expires_at: 7.days.from_now,
+      token_family_id: token_family_id
     )
 
     # 同じチェーンIDの別のトークン（無効化されていない）
     another_token = ApiToken.create!(
       user: @user,
-      token_kind: "refresh",
-      encrypted_token: SecureRandom.urlsafe_base64(32),
-      expires_at: 7.days.from_now,
-       token_family_id:  token_family_id
+      encrypted_access_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+      encrypted_refresh_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+      access_expires_at: 2.hours.from_now,
+      refresh_expires_at: 7.days.from_now,
+      token_family_id: token_family_id
     )
 
     # トークン再利用を検知
@@ -42,14 +44,15 @@ class ApiTokenValidatorTest < ActiveSupport::TestCase
   end
 
   test "should not detect reuse for single token in chain" do
-     token_family_id = SecureRandom.uuid
+    token_family_id = SecureRandom.uuid
 
     token = ApiToken.create!(
       user: @user,
-      token_kind: "refresh",
-      encrypted_token: SecureRandom.urlsafe_base64(32),
-      expires_at: 7.days.from_now,
-       token_family_id:  token_family_id
+      encrypted_access_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+      encrypted_refresh_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+      access_expires_at: 2.hours.from_now,
+      refresh_expires_at: 7.days.from_now,
+      token_family_id: token_family_id
     )
 
     # 単一トークンの場合は再利用検知しない
@@ -59,9 +62,10 @@ class ApiTokenValidatorTest < ActiveSupport::TestCase
   test "should not detect reuse for access tokens" do
     token = ApiToken.create!(
       user: @user,
-      token_kind: "access",
-      encrypted_token: SecureRandom.urlsafe_base64(32),
-      expires_at: 2.hours.from_now
+      encrypted_access_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+      encrypted_refresh_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+      access_expires_at: 2.hours.from_now,
+      refresh_expires_at: 7.days.from_now
     )
 
     # アクセストークンは再利用検知の対象外
@@ -74,9 +78,10 @@ class ApiTokenValidatorTest < ActiveSupport::TestCase
     5.times do
       ApiToken.create!(
         user: @user,
-        token_kind: "access",
-        encrypted_token: SecureRandom.urlsafe_base64(32),
-        expires_at: 2.hours.from_now
+        encrypted_access_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+        encrypted_refresh_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+        access_expires_at: 2.hours.from_now,
+        refresh_expires_at: 7.days.from_now
       )
     end
 
@@ -87,9 +92,10 @@ class ApiTokenValidatorTest < ActiveSupport::TestCase
     6.times do
       ApiToken.create!(
         user: @user,
-        token_kind: "access",
-        encrypted_token: SecureRandom.urlsafe_base64(32),
-        expires_at: 2.hours.from_now
+        encrypted_access_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+        encrypted_refresh_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+        access_expires_at: 2.hours.from_now,
+        refresh_expires_at: 7.days.from_now
       )
     end
 
@@ -101,9 +107,10 @@ class ApiTokenValidatorTest < ActiveSupport::TestCase
     # 2分前のトークン（ウィンドウ外）
     old_token = ApiToken.create!(
       user: @user,
-      token_kind: "access",
-      encrypted_token: SecureRandom.urlsafe_base64(32),
-      expires_at: 2.hours.from_now,
+      encrypted_access_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+      encrypted_refresh_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+      access_expires_at: 2.hours.from_now,
+      refresh_expires_at: 7.days.from_now,
       created_at: 2.minutes.ago
     )
 
@@ -111,9 +118,10 @@ class ApiTokenValidatorTest < ActiveSupport::TestCase
     recent_tokens = 3.times.map do
       ApiToken.create!(
         user: @user,
-        token_kind: "access",
-        encrypted_token: SecureRandom.urlsafe_base64(32),
-        expires_at: 2.hours.from_now,
+        encrypted_access_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+        encrypted_refresh_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+        access_expires_at: 2.hours.from_now,
+        refresh_expires_at: 7.days.from_now,
         created_at: 30.seconds.ago
       )
     end
@@ -127,9 +135,10 @@ class ApiTokenValidatorTest < ActiveSupport::TestCase
     3.times do
       ApiToken.create!(
         user: @user,
-        token_kind: "access",
-        encrypted_token: SecureRandom.urlsafe_base64(32),
-        expires_at: 2.hours.from_now
+        encrypted_access_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+        encrypted_refresh_token: ApiToken.encrypt_token(SecureRandom.hex(32)),
+        access_expires_at: 2.hours.from_now,
+        refresh_expires_at: 7.days.from_now
       )
     end
 

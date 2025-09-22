@@ -35,7 +35,7 @@ module Api
             user: user_response(user)
           }, status: :ok
         else
-          render json: { error: "Invalid email or password" }, status: :unauthorized
+          render json: { error: "メールアドレスまたはパスワードが不正です" }, status: :unauthorized
         end
       end
 
@@ -43,7 +43,7 @@ module Api
         refresh_token_value = params[:refresh_token]
 
         if refresh_token_value.blank?
-          return render json: { error: "Refresh token required" }, status: :unauthorized
+          return render json: { error: "リフレッシュトークンが必要です" }, status: :unauthorized
         end
 
         # リフレッシュトークンを検索
@@ -51,7 +51,7 @@ module Api
 
         # トークンが存在しない場合
         if token_record.nil?
-          return render json: { error: "Invalid or expired refresh token" }, status: :unauthorized
+          return render json: { error: "無効または期限切れのリフレッシュトークンです" }, status: :unauthorized
         end
 
         # 既に無効化されているトークンの再利用を検知
@@ -61,12 +61,12 @@ module Api
             ApiToken.where(token_family_id: token_record.token_family_id)
                     .update_all(revoked_at: Time.current)
           end
-          return render json: { error: "Token reuse detected" }, status: :unauthorized
+          return render json: { error: "トークンの再利用が検出されました" }, status: :unauthorized
         end
 
         # トークンの有効期限チェック
         if !token_record.refresh_valid?
-          return render json: { error: "Invalid or expired refresh token" }, status: :unauthorized
+          return render json: { error: "無効または期限切れのリフレッシュトークンです" }, status: :unauthorized
         end
 
         user = token_record.user
@@ -85,13 +85,13 @@ module Api
         token_value = extract_token_from_header
 
         if token_value.blank?
-          return render json: { error: "Authorization header required" }, status: :unauthorized
+          return render json: { error: "認証ヘッダーが必要です" }, status: :unauthorized
         end
 
         access_token = ApiToken.find_by_token(token_value)
 
         if access_token.nil?
-          return render json: { error: "Invalid or expired token" }, status: :unauthorized
+          return render json: { error: "無効または期限切れのトークンです" }, status: :unauthorized
         end
 
         # アクセストークンを無効化
@@ -108,14 +108,14 @@ module Api
         # クッキーをクリア
         clear_auth_cookies
 
-        render json: { message: "Logged out successfully" }, status: :ok
+        render json: { message: "正常にログアウトしました" }, status: :ok
       end
 
       def me
         if current_user
           render json: user_response(current_user), status: :ok
         else
-          render json: { error: "Not authenticated" }, status: :unauthorized
+          render json: { error: "認証されていません" }, status: :unauthorized
         end
       end
 
@@ -171,7 +171,7 @@ module Api
         attempts = Rails.cache.read(cache_key) || 0
 
         if attempts >= 10
-          render json: { error: "Too many requests. Please try again later." }, status: :too_many_requests
+          render json: { error: "リクエストが多すぎます。しばらくしてからお試しください。" }, status: :too_many_requests
           false
         else
           Rails.cache.write(cache_key, attempts + 1, expires_in: 1.minute)
