@@ -1,11 +1,14 @@
 import axios from 'axios';
 import { ChatMessage, ChatRequest, ChatResponse, ChatSession } from '@/types/chat';
+import authService from '@/services/authService'; // authServiceをインポートしてインターセプターを有効化
+import { adaptChatResponse, adaptMessagesResponse } from '@/utils/chatAdapter';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 class ChatApiService {
   private token: string | null = null;
 
+  // トークンを設定
   setToken(token: string) {
     this.token = token;
   }
@@ -24,7 +27,8 @@ class ChatApiService {
         request,
         { headers: this.getHeaders() }
       );
-      return response.data;
+      // Use adapter to ensure compatibility
+      return adaptChatResponse(response.data);
     } catch (error) {
       console.error('Error sending message:', error);
       throw error;
@@ -47,7 +51,8 @@ class ChatApiService {
         `${API_BASE_URL}/api/v1/chats?${params.toString()}`,
         { headers: this.getHeaders() }
       );
-      return response.data;
+      // Use adapter to ensure compatibility
+      return adaptMessagesResponse(response.data);
     } catch (error) {
       console.error('Error fetching messages:', error);
       throw error;

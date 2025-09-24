@@ -1,250 +1,246 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { Application, DisplayObject } from 'pixi.js';
+import { NativeLive2DWrapper } from '@/lib/live2d/NativeLive2DWrapper';
+import { usePathname } from 'next/navigation';
 
 // 履歴画面専用のLive2D設定
 const LIVE2D_CONFIG = {
   scale: 0.15,           // より小さく表示して枠内に収める
   horizontalOffset: 0,   // 中央に配置
   verticalOffset: 0,     // 垂直方向のオフセット
+  width: 300,
+  height: 400,
 };
 
 const Live2DHistoryComponent = () => {
-  const canvasContainerRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [app, setApp] = useState<Application | null>(null);
-  const [model, setModel] = useState<any>(null);
-  const modelRef = useRef<any>(null);
+  const wrapperRef = useRef<NativeLive2DWrapper | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     const setupLive2D = async () => {
+      if (!containerRef.current) return;
+
       try {
+        setIsLoading(true);
+        setError(null);
+
         // Load Cubism Core first
         if (!(window as any).Live2DCubismCore) {
           const script = document.createElement('script');
-          script.src = 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js';
+          script.src = '/live2dcubismcore.min.js';
           script.async = true;
 
           try {
             await new Promise((resolve, reject) => {
               script.onload = resolve;
-              script.onerror = () => {
-                const fallbackScript = document.createElement('script');
-                fallbackScript.src = '/live2dcubismcore.min.js';
-                fallbackScript.onload = resolve;
-                fallbackScript.onerror = reject;
-                document.head.appendChild(fallbackScript);
-              };
+              script.onerror = reject;
               document.head.appendChild(script);
             });
           } catch (e) {
-            console.warn('Failed to load Cubism Core from CDN, using stub');
+            console.warn('Failed to load Cubism Core');
           }
         }
 
-        // Then load PIXI
-        const PIXI = await import('pixi.js');
-        (window as any).PIXI = PIXI;
+        // Create and initialize wrapper
+        const wrapper = new NativeLive2DWrapper();
+        wrapperRef.current = wrapper;
 
-        // Initialize app after PIXI is loaded
-        await initApp();
+        const initialized = await wrapper.initialize(containerRef.current);
+        if (!initialized) {
+          throw new Error('Failed to initialize Live2D wrapper');
+        }
+
+        // Load model
+        const modelPath = '/live2d/nike01/nike01.model3.json';
+        const loaded = await wrapper.loadModel(modelPath);
+        if (!loaded) {
+          throw new Error('Failed to load Live2D model');
+        }
+
+        // Start rendering
+        wrapper.startRendering();
+
+        // Set initial animation
+        wrapper.startMotion('Idle', 1);
+
+        // Add greeting animation
+        setTimeout(() => {
+          wrapper.setExpression('happy');
+          wrapper.startMotion('TapBody', 2);
+        }, 1000);
+
+        setIsLoading(false);
+
       } catch (err) {
-        console.error('Failed to setup Live2D:', err);
-        setError('Failed to initialize Live2D');
+        console.error('Error setting up Live2D:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load Live2D');
         setIsLoading(false);
       }
     };
 
     setupLive2D();
 
+    // Cleanup
     return () => {
-      if (modelRef.current) {
-        try {
-          modelRef.current.destroy();
-        } catch (e) {
-          console.error('Error destroying model:', e);
-        }
-        modelRef.current = null;
-      }
-      if (app) {
-        try {
-          app.destroy(true);
-        } catch (e) {
-          console.error('Error destroying app:', e);
-        }
+      if (wrapperRef.current) {
+        wrapperRef.current.stopRendering();
+        wrapperRef.current.dispose();
+        wrapperRef.current = null;
       }
     };
   }, []);
 
+  // インタラクティブ機能
   useEffect(() => {
-    if (app) {
-      // 既存のモデルがある場合は先に削除
-      if (modelRef.current) {
-        app.stage.removeChild(modelRef.current as unknown as DisplayObject);
-        modelRef.current.destroy();
-        modelRef.current = null;
-        setModel(null);
-      }
-      // ステージをクリア
-      app.stage.removeChildren();
-      // 新しいモデルを読み込む
-      loadLive2DModel(app, '/live2d/nike01/nike01.model3.json');
-    }
-  }, [app]);
+    if (isLoading || !wrapperRef.current || !containerRef.current) return;
 
-  const initApp = async () => {
-    if (!canvasContainerRef.current || !containerRef.current) return;
+    const container = containerRef.current;
 
-    try {
-      const { Application } = await import('pixi.js');
-
-      // コンテナのサイズを取得
-      const containerRect = containerRef.current.getBoundingClientRect();
-
-      const newApp = new Application({
-        width: containerRect.width,
-        height: containerRect.height,
-        view: canvasContainerRef.current,
-        backgroundAlpha: 0,
-        antialias: true,
-        resolution: window.devicePixelRatio || 1,
-      });
-
-      setApp(newApp);
-    } catch (err) {
-      console.error('Failed to initialize PIXI Application:', err);
-      setError('Failed to initialize graphics engine');
-      setIsLoading(false);
-    }
-  };
-
-  const loadLive2DModel = async (currentApp: any, modelPath: string) => {
-    if (!canvasContainerRef.current) return;
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Check if Cubism Core is loaded
-      if (!(window as any).Live2DCubismCore) {
-        throw new Error('Live2D Cubism Core not loaded');
-      }
-
-      // Dynamic import of Live2D
-      const Live2DModule = await import('pixi-live2d-display-lipsyncpatch/cubism4');
-      const { Live2DModel } = Live2DModule;
-
-      // Use from() instead of fromSync() for better compatibility
-      const newModel = await Live2DModel.from(modelPath);
-
-      if (!newModel) {
-        throw new Error('Model failed to load');
-      }
-
-      currentApp.stage.addChild(newModel as any);
-
-      // Set anchor and position
-      if (newModel.anchor) {
-        newModel.anchor.set(0.5, 0.5);
-      }
-
-      // 履歴画面用のポジション設定
-      newModel.scale.set(LIVE2D_CONFIG.scale);
-
-      // キャラクターを左側中央に配置
-      newModel.x = currentApp.renderer.width / 2 + LIVE2D_CONFIG.horizontalOffset;
-      newModel.y = currentApp.renderer.height / 2 + LIVE2D_CONFIG.verticalOffset;
-
-      modelRef.current = newModel;
-      setModel(newModel);
-      setIsLoading(false);
-
-      console.log('Live2D model loaded successfully for history page');
-    } catch (error) {
-      console.error('Failed to load Live2D model:', error);
-      setError(`Failed to load Live2D model: ${error instanceof Error ? error.message : String(error)}`);
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!app || !model || !containerRef.current) return;
-
-    const onResize = () => {
-      if (!canvasContainerRef.current || !containerRef.current) return;
-
-      const containerRect = containerRef.current.getBoundingClientRect();
-
-      app.renderer.resize(
-        containerRect.width,
-        containerRect.height
-      );
-
-      // リサイズ時にモデル位置を調整
-      model.scale.set(LIVE2D_CONFIG.scale);
-      model.x = app.renderer.width / 2 + LIVE2D_CONFIG.horizontalOffset;
-      model.y = app.renderer.height / 2 + LIVE2D_CONFIG.verticalOffset;
-    };
-
-    // マウス追従機能を追加
+    // マウストラッキング
     const handleMouseMove = (e: MouseEvent) => {
-      if (!model || !containerRef.current) return;
+      if (!wrapperRef.current || !container) return;
 
-      const rect = containerRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
 
-      // マウス位置を正規化（-1 から 1 の範囲）
-      const normalizedX = (mouseX / rect.width) * 2 - 1;
-      const normalizedY = (mouseY / rect.height) * 2 - 1;
-
-      // Live2Dモデルの視線を更新（tapメソッドを使用）
-      if (model.tap) {
-        model.tap(e.clientX, e.clientY);
-      }
-
-      // モデルの向きを調整（focusメソッドがある場合）
-      if (model.focus) {
-        model.focus(normalizedX, -normalizedY);
-      }
+      wrapperRef.current.onMouseMove(x, y);
     };
 
-    window.addEventListener('resize', onResize);
-    window.addEventListener('mousemove', handleMouseMove);
+    // タップ処理
+    const handleClick = (e: MouseEvent) => {
+      if (!wrapperRef.current || !container) return;
+
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // タップ位置に応じて異なるモーション
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+
+      if (Math.abs(x - centerX) < 50 && Math.abs(y - centerY) < 100) {
+        // 体の中心をタップ
+        wrapperRef.current.startMotion('TapBody', 3);
+        wrapperRef.current.setExpression('happy');
+      } else if (y < rect.height * 0.3) {
+        // 頭をタップ
+        wrapperRef.current.startMotion('FlickHead', 3);
+        wrapperRef.current.setExpression('surprised');
+      } else {
+        // その他の場所
+        wrapperRef.current.startRandomMotion('Idle', 2);
+      }
+
+      wrapperRef.current.onTap(x, y);
+    };
+
+    // ホバー効果
+    const handleMouseEnter = () => {
+      if (!wrapperRef.current) return;
+      wrapperRef.current.setExpression('happy');
+    };
+
+    const handleMouseLeave = () => {
+      if (!wrapperRef.current) return;
+      wrapperRef.current.setExpression('default');
+    };
+
+    container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('click', handleClick);
+    container.addEventListener('mouseenter', handleMouseEnter);
+    container.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
-      window.removeEventListener('resize', onResize);
-      window.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('click', handleClick);
+      container.removeEventListener('mouseenter', handleMouseEnter);
+      container.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [app, model]);
+  }, [isLoading]);
+
+  // 定期的なアイドルモーション
+  useEffect(() => {
+    if (isLoading || !wrapperRef.current) return;
+
+    const idleInterval = setInterval(() => {
+      if (!wrapperRef.current) return;
+
+      // ランダムなアイドルモーション
+      const random = Math.random();
+      if (random < 0.3) {
+        wrapperRef.current.startRandomMotion('Idle', 1);
+      } else if (random < 0.5) {
+        wrapperRef.current.setRandomExpression();
+      }
+    }, 5000);
+
+    return () => clearInterval(idleInterval);
+  }, [isLoading]);
+
+  // ウィンドウリサイズ処理
+  useEffect(() => {
+    if (isLoading || !wrapperRef.current || !containerRef.current) return;
+
+    const handleResize = () => {
+      if (!wrapperRef.current || !containerRef.current) return;
+
+      const newWidth = containerRef.current.offsetWidth;
+      const newHeight = containerRef.current.offsetHeight;
+      wrapperRef.current.resize(newWidth, newHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isLoading]);
+
+  // 履歴画面以外では何も表示しない
+  if (pathname !== '/history') {
+    return null;
+  }
 
   return (
-    <div ref={containerRef} className="w-full h-full relative">
-      {error && (
-        <div className="absolute top-4 left-4 bg-red-100 text-red-700 p-2 rounded z-10 text-xs">
-          {error}
+    <div
+      ref={containerRef}
+      className="live2d-history-container"
+      style={{
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        width: `${LIVE2D_CONFIG.width}px`,
+        height: `${LIVE2D_CONFIG.height}px`,
+        pointerEvents: 'auto',
+        cursor: 'pointer',
+        zIndex: 10,
+        borderRadius: '12px',
+        overflow: 'hidden',
+        background: 'rgba(255, 255, 255, 0.05)',
+        backdropFilter: 'blur(10px)',
+        transition: 'transform 0.3s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'scale(1.05)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'scale(1.0)';
+      }}
+    >
+      {isLoading && (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-white/70 text-sm">Loading assistant...</div>
         </div>
       )}
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-gray-400 text-center">
-            <div className="animate-pulse">
-              <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-2"></div>
-              <p className="text-xs">読み込み中...</p>
-            </div>
+      {error && (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-red-400 text-sm text-center px-4">
+            {error}
           </div>
         </div>
       )}
-      <canvas
-        ref={canvasContainerRef}
-        className="w-full h-full"
-        style={{
-          display: isLoading ? 'none' : 'block',
-        }}
-      />
     </div>
   );
 };

@@ -32,7 +32,7 @@ class OpenaiService
 
     response.dig("choices", 0, "message")
   rescue StandardError => e
-    Rails.logger.error "OpenAI API Error: #{e.message}"
+    Rails.logger.error "OpenAI APIエラー: #{e.message}"
     raise e
   end
 

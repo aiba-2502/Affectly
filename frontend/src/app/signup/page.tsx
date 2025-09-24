@@ -45,11 +45,12 @@ export default function Signup() {
 
       if (response.ok) {
         // トークンをローカルストレージに保存
-        localStorage.setItem('token', data.token);
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
         localStorage.setItem('user', JSON.stringify(data.user));
         // AuthContextを更新
         await checkAuth();
-        // 登録成功 - Hello World画面へ遷移
+        // 登録成功 - ホーム画面へ遷移
         router.push('/');
       } else {
         setErrors(data.errors || ['登録に失敗しました']);
@@ -62,8 +63,8 @@ export default function Signup() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white/75 backdrop-blur-sm rounded-lg shadow-md">
         <h2 className="text-3xl font-bold text-center text-gray-900">新規登録</h2>
         
         {errors.length > 0 && (

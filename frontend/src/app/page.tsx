@@ -20,9 +20,12 @@ export default function Home() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [showLive2D, setShowLive2D] = useState(false);
+  const [showWelcomeCard, setShowWelcomeCard] = useState(true);
 
   useEffect(() => {
+    console.log('[Home] Auth check - isLoading:', isLoading, 'user:', user);
     if (!isLoading && !user) {
+      console.log('[Home] No user found, redirecting to login');
       router.push('/login');
     }
   }, [user, isLoading, router]);
@@ -50,11 +53,27 @@ export default function Home() {
     <>
       {showLive2D && <Live2DComponent />}
       <div className="flex flex-col items-center justify-center min-h-screen relative z-10 pt-16 pb-24">
-        <h1 className="text-4xl font-bold mb-4">心のログ - Kokoro Log</h1>
-        <p className="text-lg mb-2">ようこそ、{user.name || user.email}さん</p>
-        <p className="text-gray-600 mt-4">
-          下のナビゲーションからチャット機能をご利用ください
-        </p>
+        {showWelcomeCard && (
+          <div className="bg-white/75 backdrop-blur-sm shadow-lg rounded-lg p-6 max-w-md relative">
+            {/* ×ボタン */}
+            <button
+              onClick={() => setShowWelcomeCard(false)}
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="閉じる"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* カードの内容 */}
+            <h1 className="text-3xl font-bold mb-4 text-center">心のログ - Kokoro Log</h1>
+            <p className="text-lg mb-2 text-center">ようこそ、{user.name || user.email}さん</p>
+            <p className="text-gray-600 mt-4 text-center">
+              下のナビゲーションからチャット機能をご利用ください
+            </p>
+          </div>
+        )}
       </div>
       <BottomNav />
     </>

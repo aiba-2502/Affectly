@@ -43,7 +43,7 @@ setup-env: ## 環境変数ファイルをテンプレートから作成
 	@[ -f backend/.env ] && [ -f frontend/.env ] && echo "環境変数ファイルの準備完了"
 
 generate-env-with-key: setup-env ## 環境変数ファイル作成 + JWT鍵生成
-	@if docker compose ps | grep -q "web.*running" > /dev/null 2>&1; then \
+	@if docker compose ps | grep -q "web.*Up" > /dev/null 2>&1; then \
 		JWT_KEY=$$(docker compose exec -T web rails secret 2>/dev/null); \
 		echo "🔑 JWT Secret Key: $$JWT_KEY"; \
 		echo ""; \

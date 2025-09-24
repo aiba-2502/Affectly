@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useChatStore } from '@/stores/chatStore';
 import { chatApi } from '@/services/chatApi';
 import { ChatMessage } from './ChatMessage';
@@ -34,12 +34,81 @@ export const ChatContainer: React.FC = () => {
 
   const [token, setToken] = useState<string | null>(null);
   const [showLive2D, setShowLive2D] = useState(false);
+  const hasAddedGreetingRef = useRef(false);
+
+  // セッションIDが変わったときにグリーティングフラグをリセット
+  useEffect(() => {
+    hasAddedGreetingRef.current = false;
+  }, [sessionId]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // AIの初回グリーティングメッセージを追加する関数
+  const addGreetingMessage = useCallback(() => {
+    // すでにグリーティングメッセージが追加されているかチェック
+    if (!hasAddedGreetingRef.current) {
+      const greetingMessage = {
+        id: uuidv4(),
+        content: '今日はどうしたの？なんでもお話し聞かせてください',
+        role: 'assistant' as const,
+        session_id: sessionId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      addMessage(greetingMessage);
+      hasAddedGreetingRef.current = true;
+    }
+  }, [sessionId, addMessage]);
+
+  const loadMessages = useCallback(async (retryCount = 0) => {
+    try {
+      const response = await chatApi.getMessages(sessionId);
+      setMessages(response.messages);
+      // メッセージが空の場合にグリーティングを追加
+      if (response.messages.length === 0) {
+        setTimeout(() => {
+          addGreetingMessage();
+        }, 100);
+      }
+    } catch (error) {
+      // 401エラーの場合はトークンが無効な可能性
+      const axiosError = error as { response?: { status?: number } };
+      if (axiosError?.response?.status === 401) {
+        console.log('Authentication error - messages will be loaded after login');
+        // メッセージをクリア
+        setMessages([]);
+        // 認証エラー後も、グリーティングを追加
+        setTimeout(() => {
+          addGreetingMessage();
+        }, 100);
+      } else if (axiosError?.response?.status === 404 && retryCount < 2) {
+        // 404エラーの場合、サーバーの起動を待ってリトライ
+        console.log(`Server may be starting up. Retrying... (attempt ${retryCount + 1})`);
+        setTimeout(() => {
+          loadMessages(retryCount + 1);
+        }, 1000);
+      } else if (axiosError?.response?.status === 404) {
+        // リトライ後も404の場合は、新規セッションとして扱う
+        console.log('No messages found for this session - starting fresh');
+        setMessages([]);
+        // 新規セッションの場合もグリーティングを追加
+        setTimeout(() => {
+          addGreetingMessage();
+        }, 100);
+      } else {
+        console.error('Failed to load messages:', error);
+      }
+    }
+  }, [sessionId, setMessages, addGreetingMessage]);
 
   useEffect(() => {
     // トークンを取得
-    const storedToken = localStorage.getItem('token');
+    const storedToken = localStorage.getItem('access_token');
     if (storedToken) {
       setToken(storedToken);
+      // chatApiにトークンを設定
       chatApi.setToken(storedToken);
       // Live2Dを遅延ロード
       const timer = setTimeout(() => {
@@ -48,48 +117,19 @@ export const ChatContainer: React.FC = () => {
       // メッセージ読み込み（エラーハンドリング改善）
       loadMessages().catch((error) => {
         // 401と404エラー以外はコンソールにログ出力
-        if (error?.response?.status !== 401 && error?.response?.status !== 404) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError?.response?.status !== 401 && axiosError?.response?.status !== 404) {
           console.error('Failed to load messages:', error);
         }
         // 新規セッションの可能性があるため、エラーは表示しない
       });
       return () => clearTimeout(timer);
     }
-  }, [sessionId]);
+  }, [sessionId, loadMessages]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const loadMessages = async (retryCount = 0) => {
-    try {
-      const response = await chatApi.getMessages(sessionId);
-      setMessages(response.messages);
-    } catch (error: any) {
-      // 401エラーの場合はトークンが無効な可能性
-      if (error?.response?.status === 401) {
-        console.log('Authentication error - messages will be loaded after login');
-        // メッセージをクリア
-        setMessages([]);
-      } else if (error?.response?.status === 404 && retryCount < 2) {
-        // 404エラーの場合、サーバーの起動を待ってリトライ
-        console.log(`Server may be starting up. Retrying... (attempt ${retryCount + 1})`);
-        setTimeout(() => {
-          loadMessages(retryCount + 1);
-        }, 1000);
-      } else if (error?.response?.status === 404) {
-        // リトライ後も404の場合は、新規セッションとして扱う
-        console.log('No messages found for this session - starting fresh');
-        setMessages([]);
-      } else {
-        console.error('Failed to load messages:', error);
-      }
-    }
-  };
 
   const handleSendMessage = async (content: string) => {
     if (!token) {
@@ -129,8 +169,9 @@ export const ChatContainer: React.FC = () => {
         response.user_message,
         response.assistant_message
       ]);
-    } catch (error: any) {
-      setError(error.response?.data?.error || 'メッセージの送信に失敗しました');
+    } catch (error) {
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      setError(axiosError.response?.data?.error || 'メッセージの送信に失敗しました');
       // エラー時は仮メッセージを削除
       setMessages(messages.filter(m => m.id !== tempUserMessage.id));
     } finally {
@@ -142,23 +183,12 @@ export const ChatContainer: React.FC = () => {
     <>
       {/* Live2D Character - 背景として表示（チャット画面用モデル） */}
       {showLive2D && <Live2DComponent screenType="chat" />}
-      
+
       {/* チャット画面 - ChatGPT風 */}
       <div className="flex flex-col h-full relative z-10">
         {/* メッセージエリア */}
         <div className="flex-1 overflow-y-auto pb-40">
           <div className="w-full py-6 px-6 sm:px-8 md:px-12 lg:px-16">
-            {messages.length === 0 && (
-              <div className="text-center mt-20 px-4">
-                <h2 className="text-2xl font-semibold text-gray-700 mb-2">
-                  心のログ AI アシスタント
-                </h2>
-                <p className="text-gray-500">
-                  今日はどんなお話をしましょうか？
-                </p>
-              </div>
-            )}
-            
             {messages.map((message) => (
               <ChatMessage key={message.id} message={message} />
             ))}
@@ -171,7 +201,7 @@ export const ChatContainer: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex-1">
-                  <div className="inline-block bg-white/90 backdrop-blur-sm rounded-lg px-4 py-3 shadow-sm">
+                  <div className="inline-block bg-white/70 backdrop-blur-sm rounded-lg px-4 py-3 shadow-sm">
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>

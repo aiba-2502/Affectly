@@ -47,8 +47,9 @@ export class LAppGlManager {
    */
   public static setCanvas(canvasElement: HTMLCanvasElement): void {
     canvas = canvasElement;
-    // glコンテキストを初期化
-    gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    // glコンテキストを初期化（透明背景対応）
+    gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true }) ||
+         canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true });
 
     if (!gl) {
       // gl初期化失敗
@@ -63,8 +64,9 @@ export class LAppGlManager {
 
   public initialize(canvasElement: HTMLCanvasElement): boolean {
     canvas = canvasElement;
-    // glコンテキストを初期化
-    gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    // glコンテキストを初期化（透明背景対応）
+    gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true }) ||
+         canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true });
 
     if (!gl) {
       // gl初期化失敗

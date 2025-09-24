@@ -1,13 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 
 export default function Login() {
-  const router = useRouter();
-  const { checkAuth } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,38 +17,22 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/v1/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // トークンをローカルストレージに保存
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        // AuthContextを更新
-        await checkAuth();
-        // ログイン成功 - Hello World画面へ遷移
-        router.push('/');
+      await login(email, password);
+      // loginメソッドが window.location.href = '/' を実行するので、ここでは何もしない
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message === 'Login failed' ? 'メールアドレスまたはパスワードが間違っています' : 'サーバーに接続できませんでした');
       } else {
-        setError(data.error || 'ログインに失敗しました');
+        setError('ログインに失敗しました');
       }
-    } catch {
-      setError('サーバーに接続できませんでした');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white/75 backdrop-blur-sm rounded-lg shadow-md">
         <h2 className="text-3xl font-bold text-center text-gray-900">ログイン</h2>
         
         {error && (

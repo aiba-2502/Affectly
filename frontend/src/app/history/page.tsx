@@ -64,11 +64,11 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen">
       {/* Main Content - 左右分割レイアウト */}
       <div className="flex-1 flex relative overflow-hidden">
         {/* Left Side - Live2D Character エリア - 拡大版 */}
-        <div className="w-80 lg:w-96 xl:w-[28rem] bg-gradient-to-br from-purple-50 to-pink-50 border-r border-gray-200 flex-shrink-0 relative overflow-hidden">
+        <div className="w-80 lg:w-96 xl:w-[28rem] bg-transparent border-r border-gray-200 flex-shrink-0 relative overflow-hidden">
           {/* Live2Dコンポーネントを配置 - コンテナ全域を表示領域として使用 */}
           {showLive2D ? (
             <div className="absolute inset-0">
@@ -87,7 +87,7 @@ export default function HistoryPage() {
         </div>
 
         {/* Right Side - History List */}
-        <div className="flex-1 overflow-y-auto bg-white pb-24">
+        <div className="flex-1 overflow-y-auto bg-transparent pb-24">
           <div className="container mx-auto px-4 py-6 max-w-4xl">
             <HistoryList />
           </div>

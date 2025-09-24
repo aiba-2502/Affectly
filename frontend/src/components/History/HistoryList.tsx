@@ -46,7 +46,7 @@ export const HistoryList: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       if (token) {
         chatApi.setToken(token);
         const response = await chatApi.getChatSessions();
@@ -72,7 +72,7 @@ export const HistoryList: React.FC = () => {
 
     try {
       setDeletingSessionId(sessionToDelete);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       if (token) {
         chatApi.setToken(token);
         await chatApi.deleteChatSession(sessionToDelete);
@@ -105,9 +105,9 @@ export const HistoryList: React.FC = () => {
     try {
       // セッションIDを設定
       setSessionId(sessionId);
-      
+
       // メッセージを読み込む
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       if (token) {
         chatApi.setToken(token);
         const response = await chatApi.getMessages(sessionId);
@@ -215,33 +215,33 @@ export const HistoryList: React.FC = () => {
   const getEmotionColor = (emotionName: string): string => {
     const colorMap: Record<string, string> = {
       // ポジティブな感情
-      joy: 'bg-yellow-100 text-yellow-800',
-      love: 'bg-pink-100 text-pink-800',
-      trust: 'bg-green-100 text-green-800',
-      gratitude: 'bg-purple-100 text-purple-800',
-      hope: 'bg-blue-100 text-blue-800',
-      relief: 'bg-teal-100 text-teal-800',
-      pride: 'bg-indigo-100 text-indigo-800',
-      contentment: 'bg-lime-100 text-lime-800',
-      anticipation: 'bg-cyan-100 text-cyan-800',
+      joy: 'bg-yellow-100/70 text-yellow-800',
+      love: 'bg-pink-100/70 text-pink-800',
+      trust: 'bg-green-100/70 text-green-800',
+      gratitude: 'bg-purple-100/70 text-purple-800',
+      hope: 'bg-blue-100/70 text-blue-800',
+      relief: 'bg-teal-100/70 text-teal-800',
+      pride: 'bg-indigo-100/70 text-indigo-800',
+      contentment: 'bg-lime-100/70 text-lime-800',
+      anticipation: 'bg-cyan-100/70 text-cyan-800',
 
       // ネガティブな感情
-      sadness: 'bg-gray-100 text-gray-800',
-      anger: 'bg-red-100 text-red-800',
-      fear: 'bg-orange-100 text-orange-800',
-      anxiety: 'bg-amber-100 text-amber-800',
-      frustration: 'bg-rose-100 text-rose-800',
-      guilt: 'bg-stone-100 text-stone-800',
-      shame: 'bg-zinc-100 text-zinc-800',
-      disappointment: 'bg-slate-100 text-slate-800',
-      loneliness: 'bg-gray-200 text-gray-700',
-      disgust: 'bg-emerald-100 text-emerald-800',
+      sadness: 'bg-gray-100/70 text-gray-800',
+      anger: 'bg-red-100/70 text-red-800',
+      fear: 'bg-orange-100/70 text-orange-800',
+      anxiety: 'bg-amber-100/70 text-amber-800',
+      frustration: 'bg-rose-100/70 text-rose-800',
+      guilt: 'bg-stone-100/70 text-stone-800',
+      shame: 'bg-zinc-100/70 text-zinc-800',
+      disappointment: 'bg-slate-100/70 text-slate-800',
+      loneliness: 'bg-gray-200/70 text-gray-700',
+      disgust: 'bg-emerald-100/70 text-emerald-800',
 
       // ニュートラルな感情
-      surprise: 'bg-violet-100 text-violet-800'
+      surprise: 'bg-violet-100/70 text-violet-800'
     };
 
-    return colorMap[emotionName] || 'bg-gray-100 text-gray-800';
+    return colorMap[emotionName] || 'bg-gray-100/70 text-gray-800';
   };
 
   if (isLoading) {
@@ -261,7 +261,7 @@ export const HistoryList: React.FC = () => {
         <div className="text-red-500 mb-4">{error}</div>
         <button
           onClick={loadSessions}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className="px-4 py-2 bg-blue-500/90 backdrop-blur-sm text-white rounded-lg hover:bg-blue-600/90 transition-colors"
         >
           再読み込み
         </button>
@@ -296,7 +296,7 @@ export const HistoryList: React.FC = () => {
           </p>
           <button
             onClick={() => router.push('/chat')}
-            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="px-6 py-3 bg-blue-500/90 backdrop-blur-sm text-white rounded-lg hover:bg-blue-600/90 transition-colors"
           >
             チャットを開始
           </button>
@@ -312,7 +312,7 @@ export const HistoryList: React.FC = () => {
           {filteredSessions.map((session) => (
         <div
           key={session.session_id}
-          className="relative bg-white hover:bg-gray-50 rounded-lg p-4 transition-colors border border-gray-200 hover:border-gray-300 group"
+          className="relative bg-white/60 hover:bg-white/70 backdrop-blur-sm rounded-lg p-4 transition-colors border border-gray-200 hover:border-gray-300 group"
         >
           <button
             onClick={() => handleSessionClick(session.session_id)}

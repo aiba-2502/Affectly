@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { UserReport } from '@/types/report';
+import authService from '@/services/authService'; // authServiceをインポートしてインターセプターを有効化
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 

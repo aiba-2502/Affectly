@@ -1,147 +1,234 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { NativeLive2DWrapper } from '@/lib/live2d/NativeLive2DWrapper';
 
 interface Live2DCharacterProps {
   modelPath?: string;
   emotion?: 'Neutral' | 'Happy' | 'Sad' | 'Angry' | 'Relaxed' | 'Surprised';
   isSpeak?: boolean;
+  audioUrl?: string; // For lip sync
 }
 
 export const Live2DCharacter: React.FC<Live2DCharacterProps> = ({
   modelPath = '/live2d/nike01/nike01.model3.json',
   emotion = 'Neutral',
-  isSpeak = false
+  isSpeak = false,
+  audioUrl
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const appRef = useRef<any>(null);
-  const modelRef = useRef<any>(null);
-  const [isClient, setIsClient] = useState(false);
-  const [pixiLoaded, setPixiLoaded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<NativeLive2DWrapper | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isModelLoaded, setIsModelLoaded] = useState(false);
 
-  // クライアントサイドでのみ実行
+  // 初期化
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    const initializeLive2D = async () => {
+      if (!containerRef.current) return;
 
-  // PIXIとLive2Dをクライアントサイドでのみロード
-  useEffect(() => {
-    if (!isClient) return;
-
-    const loadPixi = async () => {
       try {
-        const PIXI = await import('pixi.js');
-        const { Live2DModel } = await import('pixi-live2d-display-lipsyncpatch');
-        
-        if (!canvasRef.current) return;
+        // Create wrapper
+        const wrapper = new NativeLive2DWrapper();
+        wrapperRef.current = wrapper;
 
-        // PIXIアプリケーションを作成
-        const app = new (PIXI as any).Application({
-          view: canvasRef.current,
-          width: 300,
-          height: 400,
-          backgroundColor: 0xffffff,
-          backgroundAlpha: 0,
-          antialias: true,
-          resolution: window.devicePixelRatio || 1
-        });
+        // Initialize
+        const initialized = await wrapper.initialize(containerRef.current);
+        if (!initialized) {
+          console.error('Failed to initialize Live2D wrapper');
+          return;
+        }
 
-        appRef.current = app;
+        setIsInitialized(true);
 
-        // Live2Dモデルをロード
-        Live2DModel.from(modelPath, { autoInteract: false }).then((model: any) => {
-          modelRef.current = model;
-          
-          // モデルのスケールと位置を調整
-          model.scale.set(0.15, 0.15);
-          model.x = app.view.width / 2;
-          model.y = app.view.height * 0.8;
-          
-          // モデルをステージに追加
-          app.stage.addChild(model);
+        // Load model
+        const loaded = await wrapper.loadModel(modelPath);
+        if (!loaded) {
+          console.error('Failed to load Live2D model');
+          return;
+        }
 
-          // アイドルモーション無効化（リップシンクに集中するため）
-          // model.motion('Idle');
+        setIsModelLoaded(true);
 
-          setPixiLoaded(true);
-        }).catch((error: any) => {
-          console.error('Failed to load Live2D model:', error);
-        });
+        // Start rendering
+        wrapper.startRendering();
+
+        // Set default expression
+        wrapper.setExpression('default');
+
       } catch (error) {
-        console.error('Failed to load PIXI or Live2D:', error);
+        console.error('Live2D initialization error:', error);
       }
     };
 
-    loadPixi();
+    initializeLive2D();
 
+    // Cleanup
     return () => {
-      if (appRef.current) {
-        appRef.current.destroy(true, true);
+      if (wrapperRef.current) {
+        wrapperRef.current.stopRendering();
+        wrapperRef.current.dispose();
+        wrapperRef.current = null;
       }
+      setIsInitialized(false);
+      setIsModelLoaded(false);
     };
-  }, [isClient, modelPath]);
+  }, [modelPath]);
 
   // 感情の変更処理
   useEffect(() => {
-    if (!pixiLoaded || !modelRef.current) return;
+    if (!isModelLoaded || !wrapperRef.current) return;
 
-    // 感情に応じたモーションを再生
-    const motionGroup = emotion;
-    modelRef.current.motion(motionGroup).catch((error: any) => {
-      console.error('Failed to play motion:', error);
-      // フォールバックとしてNeutralモーションを再生
-      modelRef.current?.motion('Neutral');
-    });
-  }, [emotion, pixiLoaded]);
+    try {
+      // 感情に応じた表情を設定
+      const expressionMap: Record<string, string> = {
+        'Neutral': 'default',
+        'Happy': 'happy',
+        'Sad': 'sad',
+        'Angry': 'angry',
+        'Relaxed': 'relaxed',
+        'Surprised': 'surprised'
+      };
 
-  // 話している時の口パク処理
+      const expressionId = expressionMap[emotion] || 'default';
+      wrapperRef.current.setExpression(expressionId);
+
+      // 感情に応じたモーションも再生（存在する場合）
+      const motionPriority = 2; // Normal priority
+      wrapperRef.current.startMotion(emotion, motionPriority);
+
+    } catch (error) {
+      console.error('Failed to set emotion:', error);
+    }
+  }, [emotion, isModelLoaded]);
+
+  // リップシンク処理
   useEffect(() => {
-    if (!pixiLoaded || !modelRef.current) return;
+    if (!isModelLoaded || !wrapperRef.current) return;
 
-    // 話している時の口パク表現
-    if (isSpeak) {
-      // 簡易的な口パク表現
-      const interval = setInterval(() => {
-        if (modelRef.current && modelRef.current.internalModel) {
-          const mouthValue = Math.random();
-          // Live2Dモデルのパラメータを直接操作（モデルに依存）
-          try {
-            modelRef.current.internalModel.coreModel.setParameterValueById('ParamMouthOpenY', mouthValue);
-          } catch (error) {
-            console.error('Failed to set mouth parameter:', error);
-          }
-        }
-      }, 100);
-
-      return () => clearInterval(interval);
-    } else {
-      // 口を閉じる
+    const handleLipSync = async () => {
       try {
-        if (modelRef.current && modelRef.current.internalModel) {
-          modelRef.current.internalModel.coreModel.setParameterValueById('ParamMouthOpenY', 0);
+        if (isSpeak && audioUrl) {
+          // 音声ファイルからリップシンク
+          await wrapperRef.current.startLipSync(audioUrl);
+        } else if (isSpeak) {
+          // 音声ファイルがない場合は簡単な口パクアニメーション
+          let lipSyncValue = 0;
+          const lipSyncInterval = setInterval(() => {
+            lipSyncValue = Math.sin(Date.now() * 0.005) * 0.5 + 0.5;
+            wrapperRef.current?.setLipSyncValue(lipSyncValue * 0.7);
+          }, 50);
+
+          return () => clearInterval(lipSyncInterval);
+        } else {
+          // 話していない時は口を閉じる
+          wrapperRef.current.stopLipSync();
         }
       } catch (error) {
-        console.error('Failed to close mouth:', error);
+        console.error('Lip sync error:', error);
       }
-    }
-  }, [isSpeak, pixiLoaded]);
+    };
 
-  // サーバーサイドでは何も表示しない
-  if (!isClient) {
-    return (
-      <div className="flex justify-center items-center">
-        <div className="w-[300px] h-[400px] bg-gray-100 rounded-lg animate-pulse" />
-      </div>
-    );
-  }
+    let cleanup: (() => void) | undefined;
+
+    handleLipSync().then(result => {
+      if (typeof result === 'function') {
+        cleanup = result;
+      }
+    });
+
+    return () => {
+      if (cleanup && typeof cleanup === 'function') {
+        cleanup();
+      }
+      if (wrapperRef.current) {
+        wrapperRef.current.stopLipSync();
+      }
+    };
+  }, [isSpeak, audioUrl, isModelLoaded]);
+
+  // マウスインタラクション
+  useEffect(() => {
+    if (!isInitialized || !wrapperRef.current || !containerRef.current) return;
+
+    const container = containerRef.current;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!wrapperRef.current || !container) return;
+
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      wrapperRef.current.onMouseMove(x, y);
+    };
+
+    const handleClick = (e: MouseEvent) => {
+      if (!wrapperRef.current || !container) return;
+
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      wrapperRef.current.onTap(x, y);
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!wrapperRef.current || !container) return;
+
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      wrapperRef.current.onDragStart(x, y);
+    };
+
+    const handleMouseUp = () => {
+      if (!wrapperRef.current) return;
+      wrapperRef.current.onDragEnd();
+    };
+
+    container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('click', handleClick);
+    container.addEventListener('mousedown', handleMouseDown);
+    container.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('click', handleClick);
+      container.removeEventListener('mousedown', handleMouseDown);
+      container.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isInitialized]);
+
+  // ウィンドウリサイズ処理
+  useEffect(() => {
+    if (!isInitialized || !wrapperRef.current || !containerRef.current) return;
+
+    const handleResize = () => {
+      if (!wrapperRef.current || !containerRef.current) return;
+
+      const width = containerRef.current.offsetWidth;
+      const height = containerRef.current.offsetHeight;
+      wrapperRef.current.resize(width, height);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isInitialized]);
 
   return (
-    <div className="flex justify-center items-center">
-      <canvas 
-        ref={canvasRef} 
-        className="rounded-lg"
-        style={{ maxWidth: '100%', height: 'auto' }}
-      />
+    <div
+      ref={containerRef}
+      className="live2d-character-container"
+      style={{
+        width: '300px',
+        height: '400px',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      {!isInitialized && (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-gray-500">Loading Live2D...</div>
+        </div>
+      )}
     </div>
   );
 };

@@ -50,6 +50,9 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
+
+  # Mocking and stubbing library
+  gem "mocha", require: false
 end
 
 gem "ruby-openai", "~> 8.3"

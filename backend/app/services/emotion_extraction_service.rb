@@ -1,30 +1,7 @@
 class EmotionExtractionService
-  # 感情カテゴリーの定義
-  EMOTION_CATEGORIES = {
-    joy: "喜び",
-    sadness: "悲しみ",
-    anger: "怒り",
-    fear: "恐れ",
-    surprise: "驚き",
-    disgust: "嫌悪",
-    trust: "信頼",
-    anticipation: "期待",
-    love: "愛",
-    anxiety: "不安",
-    frustration: "イライラ",
-    relief: "安心",
-    gratitude: "感謝",
-    pride: "誇り",
-    guilt: "罪悪感",
-    shame: "恥",
-    hope: "希望",
-    disappointment: "失望",
-    contentment: "満足",
-    loneliness: "孤独"
-  }.freeze
-
   def initialize(ai_service: nil)
     @ai_service = ai_service
+    @emotion_tags = load_emotion_tags
   end
 
   def extract_emotions(message_content)
@@ -37,12 +14,34 @@ class EmotionExtractionService
     # 感情の強度を計算して返す
     emotions.select { |e| e[:intensity] >= 0.3 }
   rescue StandardError => e
-    Rails.logger.error "Emotion extraction failed: #{e.message}"
+    Rails.logger.error "感情抽出エラー: #{e.message}"
     # エラー時は簡易的な感情分析を行う
     fallback_emotion_detection(message_content)
   end
 
   private
+
+  def load_emotion_tags
+    # Load only active emotion tags from database with caching
+    Rails.cache.fetch("emotion_tags", expires_in: 1.hour) do
+      Tag.where(category: "emotion", is_active: true).map do |tag|
+        {
+          name: tag.name.to_sym,
+          label_ja: tag.metadata["label_ja"],
+          label_en: tag.metadata["label_en"],
+          color: tag.metadata["color"],
+          intensity_default: tag.metadata["intensity_default"] || 0.5
+        }
+      end
+    end
+  end
+
+  def emotion_categories
+    # Build emotion categories hash from database tags
+    @emotion_tags.each_with_object({}) do |tag, hash|
+      hash[tag[:name]] = tag[:label_ja]
+    end
+  end
 
   def analyze_with_ai(content)
     prompt = build_emotion_prompt(content)
@@ -62,12 +61,13 @@ class EmotionExtractionService
   end
 
   def emotion_analysis_system_prompt
+    categories = emotion_categories
     <<~PROMPT
       あなたは感情分析の専門家です。
       ユーザーのメッセージから感情を分析し、JSON形式で返してください。
 
       以下の感情カテゴリーから該当するものを選んでください：
-      #{EMOTION_CATEGORIES.map { |k, v| "#{k}(#{v})" }.join(', ')}
+      #{categories.map { |k, v| "#{k}(#{v})" }.join(', ')}
 
       回答は必ず以下のJSON形式で返してください：
       {
@@ -94,16 +94,17 @@ class EmotionExtractionService
 
     json_data = JSON.parse(json_match[0])
     emotions = json_data["emotions"] || []
+    categories = emotion_categories
 
     emotions.map do |emotion|
       {
         name: emotion["name"].to_sym,
         intensity: emotion["intensity"].to_f,
-        label: EMOTION_CATEGORIES[emotion["name"].to_sym] || emotion["name"]
+        label: categories[emotion["name"].to_sym] || emotion["name"]
       }
     end
   rescue JSON::ParserError => e
-    Rails.logger.error "Failed to parse emotion JSON: #{e.message}"
+    Rails.logger.error "感情JSONパースエラー: #{e.message}"
     []
   end
 
@@ -112,7 +113,25 @@ class EmotionExtractionService
     emotions = []
 
     # 感情を表すキーワードと対応する感情カテゴリー
-    emotion_keywords = {
+    emotion_keywords = build_emotion_keywords
+
+    emotion_keywords.each do |emotion, keywords|
+      if keywords.any? { |keyword| content.include?(keyword) }
+        tag = @emotion_tags.find { |t| t[:name] == emotion }
+        emotions << {
+          name: emotion,
+          intensity: tag ? tag[:intensity_default] : 0.5,
+          label: tag ? tag[:label_ja] : emotion.to_s
+        }
+      end
+    end
+
+    emotions.take(3) # 最大3つまで
+  end
+
+  def build_emotion_keywords
+    # Build keyword mappings from database or use defaults
+    {
       joy: %w[嬉しい 楽しい 幸せ 最高 ワクワク うれしい たのしい しあわせ],
       sadness: %w[悲しい 寂しい つらい 切ない かなしい さびしい さみしい],
       anger: %w[腹立つ むかつく イライラ 怒り いらいら ムカツク],
@@ -124,17 +143,5 @@ class EmotionExtractionService
       hope: %w[希望 期待 楽しみ きぼう きたい],
       disappointment: %w[がっかり 残念 失望 ざんねん]
     }
-
-    emotion_keywords.each do |emotion, keywords|
-      if keywords.any? { |keyword| content.include?(keyword) }
-        emotions << {
-          name: emotion,
-          intensity: 0.5,
-          label: EMOTION_CATEGORIES[emotion]
-        }
-      end
-    end
-
-    emotions.take(3) # 最大3つまで
   end
 end

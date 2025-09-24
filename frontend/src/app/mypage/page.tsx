@@ -5,167 +5,148 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 
 export default function MyPage() {
-  const { user, isLoading, checkAuth } = useAuth();
   const router = useRouter();
-  
+  const { user, logout, checkAuth } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [originalName, setOriginalName] = useState('');
+  const [originalEmail, setOriginalEmail] = useState('');
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!user) {
       router.push('/login');
-    } else if (user) {
+    } else {
       setName(user.name || '');
       setEmail(user.email || '');
+      setOriginalName(user.name || '');
+      setOriginalEmail(user.email || '');
     }
-  }, [user, isLoading, router]);
+  }, [user, router]);
 
-  const handleSave = async () => {
+  // 変更があるかチェック
+  const hasChanges = name !== originalName || email !== originalEmail;
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
     setMessage('');
     setError('');
-    setIsSaving(true);
 
     try {
-      const token = localStorage.getItem('token');
-      const updateData = {
-        name,
-        email,
-      };
-
+      const token = localStorage.getItem('access_token');
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/v1/users/me`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(updateData),
+        body: JSON.stringify({
+          name,
+          email,
+        }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('user', JSON.stringify(data.user));
-        await checkAuth();
         setMessage('プロフィールを更新しました');
-        setIsEditing(false);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        // 更新成功後、元の値も更新
+        setOriginalName(data.user.name || '');
+        setOriginalEmail(data.user.email || '');
+        await checkAuth();
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'プロフィールの更新に失敗しました');
+        setError(data.error || 'プロフィールの更新に失敗しました');
       }
     } catch {
       setError('サーバーに接続できませんでした');
     } finally {
-      setIsSaving(false);
+      setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    if (user) {
-      setName(user.name || '');
-      setEmail(user.email || '');
-    }
-    setIsEditing(false);
-    setMessage('');
-    setError('');
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
   };
 
-  if (isLoading) {
+  if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
-  if (!user) {
-    return null;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">マイページ</h1>
-            {!isEditing && (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                編集
-              </button>
-            )}
+    <div className="min-h-screen">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* メッセージ表示 */}
+        {message && (
+          <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+            {message}
           </div>
+        )}
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
 
-          {message && (
-            <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">
-              {message}
-            </div>
-          )}
+        {/* ログアウトボタン */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
+          >
+            ログアウト
+          </button>
+        </div>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
-              {error}
-            </div>
-          )}
+        <div className="bg-white/75 backdrop-blur-sm shadow rounded-lg p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">プロフィール設定</h2>
 
-          <div className="space-y-4">
+          <form onSubmit={handleUpdateProfile} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                 ユーザー名
               </label>
               <input
+                id="name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                disabled={!isEditing}
-                className={`w-full px-3 py-2 text-black border rounded-md ${
-                  isEditing 
-                    ? 'border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500' 
-                    : 'bg-gray-100 border-gray-200'
-                }`}
+                className="mt-1 w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 メールアドレス
               </label>
               <input
+                id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={!isEditing}
-                className={`w-full px-3 py-2 text-black border rounded-md ${
-                  isEditing 
-                    ? 'border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500' 
-                    : 'bg-gray-100 border-gray-200'
-                }`}
+                className="mt-1 w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
               />
             </div>
 
-            {isEditing && (
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  onClick={handleCancel}
-                  disabled={isSaving}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 disabled:opacity-50"
-                >
-                  キャンセル
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {isSaving ? '保存中...' : '保存'}
-                </button>
-              </div>
-            )}
-          </div>
+            <button
+              type="submit"
+              disabled={loading || !hasChanges}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? '更新中...' : !hasChanges ? '変更がありません' : 'プロフィールを更新'}
+            </button>
+          </form>
         </div>
       </div>
     </div>

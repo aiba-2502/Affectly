@@ -17,9 +17,15 @@ const Live2DContainedComponent = ({ screenType = 'history' }: Live2DContainedCom
   const delegateRef = useRef<LAppDelegate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isInitializedRef = useRef(false);
 
   useEffect(() => {
     const resizeView = () => {
+      // レポート画面では初回初期化後のリサイズを無視する
+      if (screenType === 'report' && isInitializedRef.current) {
+        return;
+      }
+
       if (delegateRef.current) {
         delegateRef.current.onResize();
       }
@@ -61,6 +67,7 @@ const Live2DContainedComponent = ({ screenType = 'history' }: Live2DContainedCom
           if (appDelegateInstance.initializeWithCanvas(canvasRef.current)) {
             appDelegateInstance.run();
             delegateRef.current = appDelegateInstance;
+            isInitializedRef.current = true; // 初期化完了をマーク
             setIsLoading(false);
           } else {
             throw new Error('Failed to initialize Live2D delegate');
@@ -86,6 +93,7 @@ const Live2DContainedComponent = ({ screenType = 'history' }: Live2DContainedCom
         delegateRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

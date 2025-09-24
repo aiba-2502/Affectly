@@ -1,7 +1,7 @@
 module Api
   module V1
     class ReportsController < ApplicationController
-      before_action :authorize_request
+      before_action :authenticate_user!
       before_action :set_report_service
 
       # レポートデータ取得（分析必要性チェック付き）
