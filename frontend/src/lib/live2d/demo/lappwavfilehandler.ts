@@ -1,3 +1,5 @@
+import { logger } from '@/utils/logger';
+
 /**
  * Copyright(c) Live2D Inc. All rights reserved.
  *
@@ -113,7 +115,7 @@ export class LAppWavFileHandler {
         }
       };
 
-      console.log('LAppWavFileHandler: loadWavFile開始', {
+      logger.log('LAppWavFileHandler: loadWavFile開始', {
         url: filePath.substring(0, 100),
         isDataUrl: filePath.startsWith('data:'),
         isBase64: filePath.includes('base64'),
@@ -129,7 +131,7 @@ export class LAppWavFileHandler {
         // Base64データURLの場合の処理（使用しないが残しておく）
         if (filePath.startsWith('data:audio/wav;base64,') || filePath.startsWith('data:audio/x-wav;base64,')) {
           try {
-            console.log('LAppWavFileHandler: Base64データURLをデコード中');
+            logger.log('LAppWavFileHandler: Base64データURLをデコード中');
             // Base64部分を抽出
             const base64Data = filePath.split(',')[1];
             // Base64をバイナリ文字列に変換
@@ -139,25 +141,25 @@ export class LAppWavFileHandler {
             for (let i = 0; i < binaryString.length; i++) {
               bytes[i] = binaryString.charCodeAt(i);
             }
-            console.log('LAppWavFileHandler: Base64デコード成功', {
+            logger.log('LAppWavFileHandler: Base64デコード成功', {
               size: bytes.buffer.byteLength
             });
             return bytes.buffer;
           } catch (error) {
-            console.error('Base64デコードエラー:', error);
+            logger.error('Base64デコードエラー:', error);
             throw error;
           }
         }
 
         // Blob URLまたは通常のURLの場合はfetchを使用
         if (filePath.startsWith('blob:')) {
-          console.log('LAppWavFileHandler: Blob URLをfetch:', filePath);
+          logger.log('LAppWavFileHandler: Blob URLをfetch:', filePath);
         } else {
-          console.log('LAppWavFileHandler: 通常のURLをfetch:', filePath);
+          logger.log('LAppWavFileHandler: 通常のURLをfetch:', filePath);
         }
 
         return fetch(filePath).then(response => {
-          console.log('LAppWavFileHandler: fetchレスポンス:', {
+          logger.log('LAppWavFileHandler: fetchレスポンス:', {
             status: response.status,
             ok: response.ok,
             type: response.type,
@@ -168,21 +170,21 @@ export class LAppWavFileHandler {
           }
           return response.arrayBuffer();
         }).then(arrayBuffer => {
-          console.log('LAppWavFileHandler: ArrayBuffer取得成功', {
+          logger.log('LAppWavFileHandler: ArrayBuffer取得成功', {
             size: arrayBuffer.byteLength
           });
           return arrayBuffer;
         }).catch(error => {
-          console.error('LAppWavFileHandler: fetch失敗:', error);
+          logger.error('LAppWavFileHandler: fetch失敗:', error);
           throw error;
         });
       };
 
       (async () => {
         try {
-          console.log('LAppWavFileHandler: asyncFileLoad開始');
+          logger.log('LAppWavFileHandler: asyncFileLoad開始');
           this._byteReader._fileByte = await asyncFileLoad();
-          console.log('LAppWavFileHandler: asyncFileLoad成功', {
+          logger.log('LAppWavFileHandler: asyncFileLoad成功', {
             byteLength: this._byteReader._fileByte.byteLength,
             firstBytes: new Uint8Array(this._byteReader._fileByte.slice(0, 4))
           });
@@ -193,8 +195,8 @@ export class LAppWavFileHandler {
           this._byteReader._fileSize = this._byteReader._fileByte.byteLength;
           this._byteReader._readOffset = 0;
         } catch (error) {
-          console.error('WAVファイル読み込みエラー:', error);
-          console.error('エラー詳細:', {
+          logger.error('WAVファイル読み込みエラー:', error);
+          logger.error('エラー詳細:', {
             message: error instanceof Error ? error.message : 'Unknown error',
             stack: error instanceof Error ? error.stack : undefined
           });
@@ -207,7 +209,7 @@ export class LAppWavFileHandler {
           this._byteReader._fileByte == null ||
           this._byteReader._fileSize < 4
         ) {
-          console.error('LAppWavFileHandler: ファイルサイズ不正', {
+          logger.error('LAppWavFileHandler: ファイルサイズ不正', {
             fileSize: this._byteReader._fileSize,
             fileByte: this._byteReader._fileByte
           });
@@ -221,8 +223,8 @@ export class LAppWavFileHandler {
         try {
           // シグネチャ "RIFF"
           if (!this._byteReader.getCheckSignature('RIFF')) {
-            console.error('LAppWavFileHandler: RIFFシグネチャが見つかりません');
-            console.log('先頭4バイト:', {
+            logger.error('LAppWavFileHandler: RIFFシグネチャが見つかりません');
+            logger.log('先頭4バイト:', {
               byte0: this._byteReader._fileByte[0],
               byte1: this._byteReader._fileByte[1],
               byte2: this._byteReader._fileByte[2],
@@ -322,16 +324,16 @@ export class LAppWavFileHandler {
 
           ret = true;
 
-          console.log('LAppWavFileHandler: WAVファイルロード成功、ret=', ret);
+          logger.log('LAppWavFileHandler: WAVファイルロード成功、ret=', ret);
           safeResolve(ret);
         } catch (e) {
-          console.error('LAppWavFileHandler: WAVファイル解析エラー:', e);
+          logger.error('LAppWavFileHandler: WAVファイル解析エラー:', e);
           ret = false;
           safeResolve(ret);
         }
       })().then(() => {
         // Portfolio-frontと同じように、retをresolveする
-        console.log('LAppWavFileHandler: loadWavFile最終完了、ret=', ret);
+        logger.log('LAppWavFileHandler: loadWavFile最終完了、ret=', ret);
         safeResolve(ret);
       });
     });

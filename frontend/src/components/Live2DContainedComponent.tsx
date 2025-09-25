@@ -3,6 +3,7 @@
 import { LAppDelegate } from '@/lib/live2d/demo/lappdelegate';
 import { ScreenType } from '@/lib/live2d/demo/lappmodel';
 import { useEffect, useRef, useState } from 'react';
+import { logger } from '@/utils/logger';
 
 interface Live2DContainedComponentProps {
   screenType?: ScreenType | string;
@@ -50,7 +51,7 @@ const Live2DContainedComponent = ({ screenType = 'history' }: Live2DContainedCom
           await new Promise<void>((resolve, reject) => {
             script.onload = () => {
               if ((window as any).Live2DCubismCore) {
-                console.log('Live2DCubismCore loaded successfully');
+                logger.log('Live2DCubismCore loaded successfully');
                 resolve();
               } else {
                 reject(new Error('Live2DCubismCore not found after script load'));
@@ -74,7 +75,7 @@ const Live2DContainedComponent = ({ screenType = 'history' }: Live2DContainedCom
           }
         }
       } catch (err) {
-        console.error('Failed to initialize Live2D:', err);
+        logger.error('Failed to initialize Live2D:', err);
         setError(`Failed to initialize Live2D: ${err instanceof Error ? err.message : String(err)}`);
         setIsLoading(false);
       }

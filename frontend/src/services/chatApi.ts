@@ -2,6 +2,7 @@ import axios from 'axios';
 import { ChatMessage, ChatRequest, ChatResponse, ChatSession } from '@/types/chat';
 import authService from '@/services/authService'; // authServiceをインポートしてインターセプターを有効化
 import { adaptChatResponse, adaptMessagesResponse } from '@/utils/chatAdapter';
+import { logger } from '@/utils/logger';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -30,7 +31,7 @@ class ChatApiService {
       // Use adapter to ensure compatibility
       return adaptChatResponse(response.data);
     } catch (error) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending message:', error);
       throw error;
     }
   }
@@ -54,7 +55,7 @@ class ChatApiService {
       // Use adapter to ensure compatibility
       return adaptMessagesResponse(response.data);
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      logger.error('Error fetching messages:', error);
       throw error;
     }
   }
@@ -67,7 +68,7 @@ class ChatApiService {
       );
       return response.data;
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      logger.error('Error fetching sessions:', error);
       throw error;
     }
   }
@@ -79,7 +80,7 @@ class ChatApiService {
         { headers: this.getHeaders() }
       );
     } catch (error) {
-      console.error('Error deleting message:', error);
+      logger.error('Error deleting message:', error);
       throw error;
     }
   }
@@ -91,7 +92,7 @@ class ChatApiService {
         { headers: this.getHeaders() }
       );
     } catch (error) {
-      console.error('Error deleting chat session:', error);
+      logger.error('Error deleting chat session:', error);
       throw error;
     }
   }

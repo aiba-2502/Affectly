@@ -1,3 +1,5 @@
+import { logger } from '@/utils/logger';
+
 /**
  * WasmFFT - WebAssembly最適化FFT実装
  * 高速フーリエ変換をWebAssemblyで実装し、パフォーマンスを向上
@@ -32,7 +34,7 @@ export class WasmFFT {
     try {
       // WebAssemblyが利用可能かチェック
       if (typeof WebAssembly === 'undefined') {
-        console.warn('WebAssembly is not supported in this environment');
+        logger.warn('WebAssembly is not supported in this environment');
         return false;
       }
 
@@ -42,7 +44,7 @@ export class WasmFFT {
       this.ready = true;
       return true;
     } catch (error) {
-      console.error('Failed to initialize WasmFFT:', error);
+      logger.error('Failed to initialize WasmFFT:', error);
       return false;
     }
   }

@@ -16,6 +16,7 @@ import { LipSyncController } from './lipsync/LipSyncController';
 import { RMSProcessor } from './lipsync/RMSProcessor';
 import { PerformanceMonitor, PerformanceReport } from './PerformanceMonitor';
 import { NaturalMotionController } from './NaturalMotionController';
+import { logger } from '@/utils/logger';
 
 export interface MousePosition {
   x: number;
@@ -111,13 +112,13 @@ export class NativeLive2DWrapper {
       }) as WebGLRenderingContext;
 
       if (!this.gl) {
-        console.error('WebGL not supported');
+        logger.error('WebGL not supported');
         return false;
       }
 
       // Initialize Cubism Framework
       const cubismOption = {
-        logFunction: LAppDefine.DebugLogEnable ? console.log : null,
+        logFunction: LAppDefine.DebugLogEnable ? logger.log : null,
         loggingLevel: LAppDefine.DebugLogEnable
           ? LAppDefine.CubismLoggingLevel
           : 0, // LogLevel_Off
@@ -125,7 +126,7 @@ export class NativeLive2DWrapper {
 
       if (!CubismFramework.isStarted()) {
         if (!CubismFramework.startUp(cubismOption)) {
-          console.error('Failed to start Cubism Framework');
+          logger.error('Failed to start Cubism Framework');
           return false;
         }
         CubismFramework.initialize();
@@ -151,7 +152,7 @@ export class NativeLive2DWrapper {
       this.initialized = true;
       return true;
     } catch (error) {
-      console.error('Failed to initialize NativeLive2DWrapper:', error);
+      logger.error('Failed to initialize NativeLive2DWrapper:', error);
       return false;
     }
   }
@@ -200,7 +201,7 @@ export class NativeLive2DWrapper {
 
       return false;
     } catch (error) {
-      console.error('Failed to load model:', error);
+      logger.error('Failed to load model:', error);
       return false;
     }
   }
@@ -314,7 +315,7 @@ export class NativeLive2DWrapper {
         return true;
       }
     } catch (error) {
-      console.error('Failed to start motion:', error);
+      logger.error('Failed to start motion:', error);
     }
 
     return false;
@@ -339,7 +340,7 @@ export class NativeLive2DWrapper {
         return true;
       }
     } catch (error) {
-      console.error('Failed to start random motion:', error);
+      logger.error('Failed to start random motion:', error);
     }
 
     return false;
@@ -473,7 +474,7 @@ export class NativeLive2DWrapper {
         return true;
       }
     } catch (error) {
-      console.error('Failed to start lip sync:', error);
+      logger.error('Failed to start lip sync:', error);
     }
 
     return false;

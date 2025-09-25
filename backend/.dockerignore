@@ -40,6 +40,8 @@
 # Ignore development files
 /.devcontainer
 
-# Ignore Docker-related files
+# Ignore Docker-related files (except production)
 /.dockerignore
-/Dockerfile*
+/Dockerfile
+/Dockerfile.local
+# Keep Dockerfile.production for Railway

@@ -5,6 +5,7 @@ import { ChatSession, Emotion } from '@/types/chat';
 import { chatApi } from '@/services/chatApi';
 import { useRouter } from 'next/navigation';
 import { useChatStore } from '@/stores/chatStore';
+import { logger } from '@/utils/logger';
 import {
   ChatBubbleLeftRightIcon,
   ClockIcon,
@@ -53,7 +54,7 @@ export const HistoryList: React.FC = () => {
         setSessions(response.sessions);
       }
     } catch (error) {
-      console.error('Failed to load sessions:', error);
+      logger.error('Failed to load sessions:', error);
       setError('履歴の読み込みに失敗しました');
     } finally {
       setIsLoading(false);
@@ -86,7 +87,7 @@ export const HistoryList: React.FC = () => {
         setDeleteModalOpen(false);
       }
     } catch (error) {
-      console.error('Failed to delete session:', error);
+      logger.error('Failed to delete session:', error);
       setError('チャット履歴の削除に失敗しました');
     } finally {
       setDeletingSessionId(null);
@@ -117,7 +118,7 @@ export const HistoryList: React.FC = () => {
       // チャット画面に遷移
       router.push('/chat');
     } catch (error) {
-      console.error('Failed to load session:', error);
+      logger.error('Failed to load session:', error);
       setError('セッションの読み込みに失敗しました');
     }
   };

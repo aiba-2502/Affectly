@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/utils/logger';
 
 interface User {
   id: number;
@@ -27,9 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      console.log('[Auth] checkAuth - token:', token ? 'exists' : 'not found');
+      logger.log('[Auth] checkAuth - token:', token ? 'exists' : 'not found');
       if (!token) {
-        console.log('[Auth] checkAuth - No token, setting user to null');
+        logger.log('[Auth] checkAuth - No token, setting user to null');
         setUser(null);
         setIsLoading(false);
         return;
@@ -51,19 +52,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (response.ok) {
           const userData = await response.json();
-          console.log('[Auth] checkAuth - Authentication successful:', userData);
+          logger.log('[Auth] checkAuth - Authentication successful:', userData);
           setUser(userData);
         } else {
-          console.log('[Auth] checkAuth - Authentication failed, status:', response.status);
+          logger.log('[Auth] checkAuth - Authentication failed, status:', response.status);
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           setUser(null);
         }
       } catch (error: unknown) {
         if (error instanceof Error && error.name === 'AbortError') {
-          console.warn('Auth check timed out');
+          logger.warn('Auth check timed out');
         } else {
-          console.error('Auth check failed:', error);
+          logger.error('Auth check failed:', error);
         }
         // タイムアウトやエラー時は、トークンがあればユーザーデータを仮設定
         if (token) {
@@ -78,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      logger.error('Auth check failed:', error);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -99,11 +100,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const data = await response.json();
-    console.log('[Auth] login - Success, received data:', data);
+    logger.log('[Auth] login - Success, received data:', data);
     localStorage.setItem('access_token', data.access_token);
     localStorage.setItem('refresh_token', data.refresh_token);
     localStorage.setItem('user', JSON.stringify(data.user)); // ユーザー情報もキャッシュ
-    console.log('[Auth] login - Saved token to localStorage:', data.access_token);
+    logger.log('[Auth] login - Saved token to localStorage:', data.access_token);
     setUser(data.user);
 
     // 状態更新を確実に反映させるため、ページをリロード
@@ -121,11 +122,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // 初期ロード時のユーザー情報取得を最適化
     const initAuth = async () => {
-      console.log('[Auth] initAuth - Starting initialization');
+      logger.log('[Auth] initAuth - Starting initialization');
       const token = localStorage.getItem('access_token');
-      console.log('[Auth] initAuth - Token from localStorage:', token ? 'exists' : 'not found');
+      logger.log('[Auth] initAuth - Token from localStorage:', token ? 'exists' : 'not found');
       if (!token) {
-        console.log('[Auth] initAuth - No token found, setting isLoading to false');
+        logger.log('[Auth] initAuth - No token found, setting isLoading to false');
         setIsLoading(false);
         return;
       }

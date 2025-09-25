@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { logger } from '@/utils/logger';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -192,7 +193,7 @@ class AuthService {
       }
     } catch (error) {
       // ログアウトエラーは無視（トークンが既に無効な場合など）
-      console.error('Logout error:', error);
+      logger.error('Logout error:', error);
     } finally {
       // ローカルストレージをクリア
       this.clearAuthData();

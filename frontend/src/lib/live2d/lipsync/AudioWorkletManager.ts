@@ -4,6 +4,7 @@
  */
 
 import { AUDIO_CONFIG } from './constants';
+import { logger } from '@/utils/logger';
 
 export interface AudioWorkletData {
   rms: number;
@@ -52,7 +53,7 @@ export class AudioWorkletManager {
       this.initialized = true;
       return true;
     } catch (error) {
-      console.error('Failed to initialize AudioWorklet:', error);
+      logger.error('Failed to initialize AudioWorklet:', error);
       return false;
     }
   }
@@ -86,7 +87,7 @@ export class AudioWorkletManager {
 
       return true;
     } catch (error) {
-      console.error('Failed to start microphone:', error);
+      logger.error('Failed to start microphone:', error);
       return false;
     }
   }
@@ -254,7 +255,7 @@ export class AudioWorkletManager {
           break;
 
         case 'error':
-          console.error('AudioWorklet error:', data);
+          logger.error('AudioWorklet error:', data);
           break;
       }
     };

@@ -1,3 +1,5 @@
+import { logger } from '@/utils/logger';
+
 /**
  * Copyright(c) Live2D Inc. All rights reserved.
  *
@@ -49,7 +51,7 @@ export class LAppPal {
    * @param message 文字列
    */
   public static printMessage(message: string): void {
-    console.log(message);
+    logger.log(message);
   }
 
   static lastUpdate = Date.now();
