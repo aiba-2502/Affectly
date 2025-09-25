@@ -23,9 +23,9 @@ COPY Gemfile Gemfile.lock ./
 RUN bundle config set --local deployment 'true' && \
     bundle config set --local without 'development test' && \
     bundle install --jobs=4 --retry=3 && \
-    rm -rf /usr/local/bundle/cache/*.gem && \
-    find /usr/local/bundle/gems/ -name "*.c" -delete && \
-    find /usr/local/bundle/gems/ -name "*.o" -delete
+    rm -rf ./vendor/bundle/cache/*.gem && \
+    find ./vendor/bundle/gems/ -name "*.c" -delete 2>/dev/null || true && \
+    find ./vendor/bundle/gems/ -name "*.o" -delete 2>/dev/null || true
 
 # Copy application code
 COPY . .
@@ -61,7 +61,6 @@ RUN groupadd -r rails && useradd -r -g rails rails
 WORKDIR /app
 
 # Copy built application from builder stage
-COPY --from=builder --chown=rails:rails /usr/local/bundle /usr/local/bundle
 COPY --from=builder --chown=rails:rails /app /app
 
 # Create necessary directories
@@ -75,7 +74,7 @@ USER rails
 ENV RAILS_ENV=production \
     RAILS_LOG_TO_STDOUT=true \
     RAILS_SERVE_STATIC_FILES=false \
-    BUNDLE_PATH=/usr/local/bundle \
+    BUNDLE_PATH=/app/vendor/bundle \
     BUNDLE_WITHOUT="development:test"
 
 # Expose port
