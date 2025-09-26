@@ -1,3 +1,5 @@
+import { logger } from '@/utils/logger';
+
 /**
  * Copyright(c) Live2D Inc. All rights reserved.
  *
@@ -53,7 +55,7 @@ export class LAppGlManager {
 
     if (!gl) {
       // gl初期化失敗
-      console.error('Cannot initialize WebGL. This browser does not support.');
+      logger.error('Cannot initialize WebGL. This browser does not support.');
       gl = null;
     }
   }
@@ -70,7 +72,7 @@ export class LAppGlManager {
 
     if (!gl) {
       // gl初期化失敗
-      console.error('Cannot initialize WebGL. This browser does not support.');
+      logger.error('Cannot initialize WebGL. This browser does not support.');
       gl = null;
       return false;
     }

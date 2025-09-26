@@ -7,6 +7,7 @@
 
 import { CubismMatrix44 } from '../framework/math/cubismmatrix44';
 import { CubismViewMatrix } from '../framework/math/cubismviewmatrix';
+import { logger } from '@/utils/logger';
 
 import * as LAppDefine from './lappdefine';
 import { LAppLive2DManager } from './lapplive2dmanager';
@@ -237,7 +238,7 @@ export class LAppView {
 
     // デバッグ: 変換後の値を確認
     if (LAppDefine.DebugLogEnable) {
-      console.log(`Mouse moved: viewX=${viewX}, viewY=${viewY}`);
+      logger.log(`Mouse moved: viewX=${viewX}, viewY=${viewY}`);
     }
 
     // マウスカーソルに向かって視線を向ける

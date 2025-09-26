@@ -9,6 +9,7 @@ import { UserReport } from '@/types/report';
 import reportService from '@/services/reportService';
 import PersonalAdviceSection from '@/components/PersonalAdviceSection';
 import dynamic from 'next/dynamic';
+import { logger } from '@/utils/logger';
 
 // Live2Dコンポーネントを動的インポート（SSR無効化）- コンテナ内表示版
 const Live2DContainedComponent = dynamic(() => import('@/components/Live2DContainedComponent'), {
@@ -94,7 +95,7 @@ export default function ReportPage() {
   const fetchReportData = async () => {
     try {
       setIsLoadingData(true);
-      console.log('レポートデータを取得中...');
+      logger.log('レポートデータを取得中...');
 
       // トークンをセット
       const token = localStorage.getItem('access_token');
@@ -142,7 +143,7 @@ export default function ReportPage() {
         setNeedsAnalysis(false);
       }
     } catch (error) {
-      console.error('レポートデータの取得に失敗しました:', error);
+      logger.error('レポートデータの取得に失敗しました:', error);
       setReportData(null);
     } finally {
       setIsLoadingData(false);
@@ -159,12 +160,12 @@ export default function ReportPage() {
 
     try {
       setIsAnalyzing(true);
-      console.log('AI分析を開始します...');
+      logger.log('AI分析を開始します...');
 
       const startTime = Date.now();
       const data = await reportService.executeAnalysis();
       const endTime = Date.now();
-      console.log(`AI分析が完了しました（${(endTime - startTime) / 1000}秒）`);
+      logger.log(`AI分析が完了しました（${(endTime - startTime) / 1000}秒）`);
 
       setReportData(data);
       setNeedsAnalysis(false);
@@ -172,7 +173,7 @@ export default function ReportPage() {
       setLastExecutionTime(new Date()); // 実行時刻を記録
       setCooldownRemaining(60); // 60秒のクールダウン開始
     } catch (error) {
-      console.error('AI分析に失敗しました:', error);
+      logger.error('AI分析に失敗しました:', error);
       alert('分析に失敗しました。しばらくしてから再試行してください。');
     } finally {
       setIsAnalyzing(false);

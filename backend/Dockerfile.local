@@ -1,27 +1,23 @@
-# Rails 8.0 with Ruby 3.3
+# Rails 8.0 with Ruby 3.3 (Development)
 FROM ruby:3.3.5-slim
 
-# Install dependencies
+# Install only essential dependencies for development
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
-    nodejs \
-    npm \
-    git \
-    curl \
-    vim \
     postgresql-client \
+    curl \
     && rm -rf /var/lib/apt/lists/*
-
-# Install Yarn
-RUN npm install -g yarn
 
 # Set working directory
 WORKDIR /app
 
-# Install Rails 8
-RUN gem install rails -v "~> 8.0.0"
+# Copy Gemfile first for better cache efficiency
+COPY Gemfile Gemfile.lock ./
+
+# Install gems
+RUN bundle install
 
 # Add a script to handle Rails setup
 RUN echo '#!/bin/bash\n\

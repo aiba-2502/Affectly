@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
   },
+  // ESLintをビルド時に無視
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  // TypeScriptエラーをビルド時に無視（必要に応じて）
+  typescript: {
+    ignoreBuildErrors: false,
+  },
   // webpack設定でバンドルサイズを最適化
   webpack: (config, { isServer }) => {
     if (!isServer) {

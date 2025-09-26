@@ -10,6 +10,7 @@ import { LAppModelHome } from './models/lappmodel-home';
 import { LAppModelChat } from './models/lappmodel-chat';
 import { LAppModelHistory } from './models/lappmodel-history';
 import { LAppModelReport } from './models/lappmodel-report';
+import { logger } from '@/utils/logger';
 
 /**
  * 画面タイプの定義
@@ -33,23 +34,23 @@ export class LAppModelFactory {
   public static create(screenType: ScreenType): LAppModelBase {
     switch (screenType) {
       case ScreenType.Home:
-        console.log('Creating Home screen model - Active movements');
+        logger.log('Creating Home screen model - Active movements');
         return new LAppModelHome();
 
       case ScreenType.Chat:
-        console.log('Creating Chat screen model - Calm movements');
+        logger.log('Creating Chat screen model - Calm movements');
         return new LAppModelChat();
 
       case ScreenType.History:
-        console.log('Creating History screen model - Moderate movements');
+        logger.log('Creating History screen model - Moderate movements');
         return new LAppModelHistory();
 
       case ScreenType.Report:
-        console.log('Creating Report screen model - Intellectual movements');
+        logger.log('Creating Report screen model - Intellectual movements');
         return new LAppModelReport();
 
       default:
-        console.log('Creating default model (Home)');
+        logger.log('Creating default model (Home)');
         return new LAppModelHome();
     }
   }

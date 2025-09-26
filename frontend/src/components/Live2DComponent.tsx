@@ -4,6 +4,7 @@ import { LAppDelegate } from '@/lib/live2d/demo/lappdelegate';
 import { ScreenType } from '@/lib/live2d/demo/lappmodel';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { logger } from '@/utils/logger';
 
 interface Live2DComponentProps {
   disableMotions?: boolean; // 動作を無効化するフラグ（後方互換性のため残す）
@@ -44,7 +45,7 @@ const Live2DComponent = ({ disableMotions = false, screenType }: Live2DComponent
             script.onload = () => {
               // Live2DCubismCoreが正しくロードされたか確認
               if ((window as any).Live2DCubismCore) {
-                console.log('Live2DCubismCore loaded successfully');
+                logger.log('Live2DCubismCore loaded successfully');
                 resolve();
               } else {
                 reject(new Error('Live2DCubismCore not found after script load'));
@@ -71,7 +72,7 @@ const Live2DComponent = ({ disableMotions = false, screenType }: Live2DComponent
           }
         }
       } catch (err) {
-        console.error('Failed to initialize Live2D:', err);
+        logger.error('Failed to initialize Live2D:', err);
         setError(`Failed to initialize Live2D: ${err instanceof Error ? err.message : String(err)}`);
         setIsLoading(false);
       }

@@ -4,6 +4,7 @@
  */
 
 import { RMSProcessor } from './RMSProcessor';
+import { logger } from '@/utils/logger';
 
 export class LipSyncVerifier {
   private rmsProcessor: RMSProcessor;
@@ -154,12 +155,12 @@ export class LipSyncVerifier {
 export function verifyLipSyncFix(): void {
   const verifier = new LipSyncVerifier();
 
-  console.log('=== リップシンク修正の検証 ===');
+  logger.log('=== リップシンク修正の検証 ===');
 
   // 期待動作の確認
   const results = verifier.verifyExpectedBehavior();
-  console.table(results);
+  logger.table(results);
 
   // サマリー表示
-  console.log(verifier.getSummary());
+  logger.log(verifier.getSummary());
 }

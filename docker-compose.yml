@@ -48,7 +48,7 @@ services:
   web:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.local
     command: bash -c "bundle install && bundle exec rails server -b 0.0.0.0"
     volumes:
       - ./backend:/app
@@ -80,7 +80,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.local
     command: sh -c "npm install && npm run dev:webpack & sleep 15 && node scripts/precompile.js && wait"
     volumes:
       - ./frontend:/app

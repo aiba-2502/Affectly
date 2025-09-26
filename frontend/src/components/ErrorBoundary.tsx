@@ -1,6 +1,7 @@
 'use client';
 
 import React, { Component, ReactNode } from 'react';
+import { logger } from '@/utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -25,7 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // エラーロギングサービスにエラーを記録
-    console.error('Error caught by ErrorBoundary:', error, errorInfo);
+    logger.error('Error caught by ErrorBoundary:', error, errorInfo);
     
     // 本番環境では、ここでSentryなどのエラー追跡サービスに送信
     if (process.env.NODE_ENV === 'production') {

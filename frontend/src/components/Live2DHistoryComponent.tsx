@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NativeLive2DWrapper } from '@/lib/live2d/NativeLive2DWrapper';
 import { usePathname } from 'next/navigation';
+import { logger } from '@/utils/logger';
 
 // 履歴画面専用のLive2D設定
 const LIVE2D_CONFIG = {
@@ -41,7 +42,7 @@ const Live2DHistoryComponent = () => {
               document.head.appendChild(script);
             });
           } catch (e) {
-            console.warn('Failed to load Cubism Core');
+            logger.warn('Failed to load Cubism Core');
           }
         }
 
@@ -76,7 +77,7 @@ const Live2DHistoryComponent = () => {
         setIsLoading(false);
 
       } catch (err) {
-        console.error('Error setting up Live2D:', err);
+        logger.error('Error setting up Live2D:', err);
         setError(err instanceof Error ? err.message : 'Failed to load Live2D');
         setIsLoading(false);
       }

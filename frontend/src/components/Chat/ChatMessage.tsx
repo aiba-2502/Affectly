@@ -6,6 +6,7 @@ import { UserCircleIcon, SpeakerWaveIcon, StopIcon } from '@heroicons/react/24/s
 import DOMPurify from 'dompurify';
 import { VoiceService } from '@/services/voiceApi';
 import { useLipSyncHandler } from '@/lib/hooks/useLipSyncHandler';
+import { logger } from '@/utils/logger';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -51,7 +52,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
           },
           onError: (error) => {
             // エラー時のコールバック
-            console.error('音声再生エラー:', error);
+            logger.error('音声再生エラー:', error);
             stopLipSync();  // リップシンクを停止
             setIsPlaying(false);
             alert('音声再生に失敗しました');
@@ -59,13 +60,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
           onLipSyncReady: (audioUrl) => {
             // リップシンクを開始
             startLipSync(audioUrl).catch(error => {
-              console.error('リップシンク開始エラー:', error);
+              logger.error('リップシンク開始エラー:', error);
             });
           }
         });
         setIsPlaying(true);
       } catch (error) {
-        console.error('音声再生エラー:', error);
+        logger.error('音声再生エラー:', error);
         alert('音声再生に失敗しました');
         setIsPlaying(false);
       } finally {

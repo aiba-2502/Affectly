@@ -7,6 +7,7 @@ import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import dynamic from 'next/dynamic';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '@/utils/logger';
 
 // Live2Dコンポーネントを動的インポート（SSR無効化）
 const Live2DComponent = dynamic(() => import('@/components/Live2DComponent'), {
@@ -76,7 +77,7 @@ export const ChatContainer: React.FC = () => {
       // 401エラーの場合はトークンが無効な可能性
       const axiosError = error as { response?: { status?: number } };
       if (axiosError?.response?.status === 401) {
-        console.log('Authentication error - messages will be loaded after login');
+        logger.log('Authentication error - messages will be loaded after login');
         // メッセージをクリア
         setMessages([]);
         // 認証エラー後も、グリーティングを追加
@@ -85,20 +86,20 @@ export const ChatContainer: React.FC = () => {
         }, 100);
       } else if (axiosError?.response?.status === 404 && retryCount < 2) {
         // 404エラーの場合、サーバーの起動を待ってリトライ
-        console.log(`Server may be starting up. Retrying... (attempt ${retryCount + 1})`);
+        logger.log(`Server may be starting up. Retrying... (attempt ${retryCount + 1})`);
         setTimeout(() => {
           loadMessages(retryCount + 1);
         }, 1000);
       } else if (axiosError?.response?.status === 404) {
         // リトライ後も404の場合は、新規セッションとして扱う
-        console.log('No messages found for this session - starting fresh');
+        logger.log('No messages found for this session - starting fresh');
         setMessages([]);
         // 新規セッションの場合もグリーティングを追加
         setTimeout(() => {
           addGreetingMessage();
         }, 100);
       } else {
-        console.error('Failed to load messages:', error);
+        logger.error('Failed to load messages:', error);
       }
     }
   }, [sessionId, setMessages, addGreetingMessage]);
@@ -119,7 +120,7 @@ export const ChatContainer: React.FC = () => {
         // 401と404エラー以外はコンソールにログ出力
         const axiosError = error as { response?: { status?: number } };
         if (axiosError?.response?.status !== 401 && axiosError?.response?.status !== 404) {
-          console.error('Failed to load messages:', error);
+          logger.error('Failed to load messages:', error);
         }
         // 新規セッションの可能性があるため、エラーは表示しない
       });

@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { LAppWavFileHandler } from '@/lib/live2d/demo/lappwavfilehandler';
 import { LAppDelegate } from '@/lib/live2d/demo/lappdelegate';
 import { RMSProcessor } from '@/lib/live2d/lipsync/RMSProcessor';
+import { logger } from '@/utils/logger';
 
 // LAppDelegateの内部構造の型定義
 interface DelegateWithSubdelegates {
@@ -90,7 +91,7 @@ export function useLipSyncHandler() {
         }
       }
     } catch (error) {
-      console.error('リップシンク値のリセットエラー:', error);
+      logger.error('リップシンク値のリセットエラー:', error);
     }
   }, []);
 
@@ -110,20 +111,20 @@ export function useLipSyncHandler() {
         const appDelegate = LAppDelegate.getInstance();
         const subdelegates = (appDelegate as unknown as DelegateWithSubdelegates)._subdelegates;
         if (!subdelegates || subdelegates.getSize() === 0) {
-          console.error('Subdelegateが見つかりません');
+          logger.error('Subdelegateが見つかりません');
           return;
         }
 
         const subdelegate = subdelegates.at(0);
         const manager = subdelegate.getLive2DManager();
         if (!manager) {
-          console.error('Live2Dマネージャーが見つかりません');
+          logger.error('Live2Dマネージャーが見つかりません');
           return;
         }
 
         const model = manager.getModel(0);
         if (!model) {
-          console.error('Live2Dモデルが見つかりません');
+          logger.error('Live2Dモデルが見つかりません');
           return;
         }
 
@@ -151,7 +152,7 @@ export function useLipSyncHandler() {
           const updated = wavFileHandlerRef.current.update(deltaTime);
 
           if (!updated) {
-            console.log('音声データ終了');
+            logger.log('音声データ終了');
             stopLipSync();
             return;
           }
@@ -204,7 +205,7 @@ export function useLipSyncHandler() {
             previousRmsRef.current = smoothedRms;
 
             if (shouldLog) {
-              console.log('リップシンク値計算:', {
+              logger.log('リップシンク値計算:', {
                 windowStart,
                 windowEnd,
                 sampleCount,
@@ -223,7 +224,7 @@ export function useLipSyncHandler() {
           }
         }
       } catch (error) {
-        console.error('リップシンク更新エラー:', error);
+        logger.error('リップシンク更新エラー:', error);
       }
     };
 
@@ -236,7 +237,7 @@ export function useLipSyncHandler() {
    * @param audioUrl 音声ファイルのURL（WAV形式）
    */
   const startLipSync = useCallback(async (audioUrl: string): Promise<void> => {
-    console.log('useLipSyncHandler: リップシンク開始', {
+    logger.log('useLipSyncHandler: リップシンク開始', {
       urlType: audioUrl.startsWith('data:') ? 'Base64 Data URL' : audioUrl.startsWith('blob:') ? 'Blob URL' : 'External URL',
       urlPreview: audioUrl.substring(0, 100),
       hasWavFileHandler: !!wavFileHandlerRef.current
@@ -246,7 +247,7 @@ export function useLipSyncHandler() {
     stopLipSync();
 
     if (!wavFileHandlerRef.current) {
-      console.error('リップシンク用のオブジェクトが初期化されていません');
+      logger.error('リップシンク用のオブジェクトが初期化されていません');
       return;
     }
 
@@ -257,15 +258,15 @@ export function useLipSyncHandler() {
       // ただし、startメソッドはPromiseを返さないため、loadWavFileを直接呼ぶ必要がある
       const success = await wavFileHandlerRef.current.loadWavFile(audioUrl);
       if (!success) {
-        console.error('WAVファイルのロードに失敗しました');
+        logger.error('WAVファイルのロードに失敗しました');
         isLipSyncingRef.current = false;
         return;
       }
 
-      console.log('WAVファイルのロードに成功');
+      logger.log('WAVファイルのロードに成功');
 
       // ロード後のWAVファイル情報を確認
-      console.log('WAVファイル情報:', {
+      logger.log('WAVファイル情報:', {
         numberOfChannels: wavFileHandlerRef.current._wavFileInfo?._numberOfChannels,
         samplingRate: wavFileHandlerRef.current._wavFileInfo?._samplingRate,
         samplesPerChannel: wavFileHandlerRef.current._wavFileInfo?._samplesPerChannel,
@@ -288,7 +289,7 @@ export function useLipSyncHandler() {
         }
         avgValue /= sampleCount;
 
-        console.log('PCMデータ確認:', {
+        logger.log('PCMデータ確認:', {
           totalSamples: pcmChannel.length,
           avgAmplitude: avgValue
         });
@@ -296,7 +297,7 @@ export function useLipSyncHandler() {
         // 適切な固定感度を設定（自動調整は行わない）
         // 一般的な音声データに対して適切な値
         rmsScaleFactorRef.current = 8;
-        console.log('感度設定: 固定値', rmsScaleFactorRef.current);
+        logger.log('感度設定: 固定値', rmsScaleFactorRef.current);
       }
 
       // サンプル位置とRMS値をリセット（startメソッドの処理を直接実行）
@@ -313,7 +314,7 @@ export function useLipSyncHandler() {
       audioStartTimeRef.current = Date.now();
       lastUpdateTimeRef.current = audioStartTimeRef.current; // 最初の更新時刻も記録
       lastSampleOffsetRef.current = 0; // サンプル位置もリセット
-      console.log('リップシンク開始時刻記録:', audioStartTimeRef.current);
+      logger.log('リップシンク開始時刻記録:', audioStartTimeRef.current);
 
       // リップシンク更新を開始
       updateLipSync();
@@ -322,7 +323,7 @@ export function useLipSyncHandler() {
       // ここでは再生しない（二重再生を防ぐ）
 
     } catch (error) {
-      console.error('リップシンク開始エラー:', error);
+      logger.error('リップシンク開始エラー:', error);
       stopLipSync();
     }
   }, [stopLipSync, updateLipSync]);

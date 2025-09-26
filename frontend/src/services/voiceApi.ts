@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { decode as base64ToArrayBuffer } from 'base64-arraybuffer';
+import { logger } from '@/utils/logger';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -61,7 +62,7 @@ export class VoiceService {
           if (oldUrl && oldUrl.startsWith('blob:')) {
             URL.revokeObjectURL(oldUrl);
             this.blobUrls.delete(oldUrl);
-            console.log('VoiceService: 古いBlob URL解放', oldUrl);
+            logger.log('VoiceService: 古いBlob URL解放', oldUrl);
           }
 
           this.audioCache.delete(firstKey);
@@ -75,10 +76,10 @@ export class VoiceService {
           (audioUrl.includes('wav') ||
            audioUrl.startsWith('data:audio/wav') ||
            audioUrl.startsWith('blob:'))) {
-        console.log('VoiceService: リップシンクコールバック実行', audioUrl.substring(0, 50) + '...');
+        logger.log('VoiceService: リップシンクコールバック実行', audioUrl.substring(0, 50) + '...');
         options.onLipSyncReady(audioUrl);
       } else {
-        console.log('VoiceService: リップシンクコールバックスキップ', {
+        logger.log('VoiceService: リップシンクコールバックスキップ', {
           hasCallback: !!options?.onLipSyncReady,
           isWav: audioUrl.includes('wav') || audioUrl.startsWith('data:audio/wav') || audioUrl.startsWith('blob:'),
           urlPreview: audioUrl.substring(0, 50) + '...'
@@ -109,7 +110,7 @@ export class VoiceService {
       await this.currentAudio.play();
       return this.currentAudio;
     } catch (error) {
-      console.error('音声再生エラー:', error);
+      logger.error('音声再生エラー:', error);
       throw error;
     }
   }
@@ -131,7 +132,7 @@ export class VoiceService {
       );
 
       // レスポンスから音声URLまたはBase64データを取得
-      console.log('VoiceService: API応答', {
+      logger.log('VoiceService: API応答', {
         hasAudioUrl: !!response.data.audioUrl,
         hasAudioData: !!response.data.audioData,
         audioUrlPreview: response.data.audioUrl ? response.data.audioUrl.substring(0, 50) : null
@@ -143,7 +144,7 @@ export class VoiceService {
       } else if (response.data.audioData) {
         // Base64データが返される場合
         try {
-          console.log('VoiceService: Base64データ処理開始');
+          logger.log('VoiceService: Base64データ処理開始');
 
           // Base64データの先頭を確認
           const base64Data = response.data.audioData;
@@ -152,7 +153,7 @@ export class VoiceService {
           // NijiVoice APIから返されるWAVファイルは圧縮形式の可能性があるため、
           // 全てのオーディオデータをAudioContext経由でデコードして
           // 線形PCM（フォーマットID=1）のWAVファイルに変換する
-          console.log('VoiceService: AudioContextでデコード処理開始');
+          logger.log('VoiceService: AudioContextでデコード処理開始');
 
           try {
             // まずBase64をArrayBufferに変換
@@ -173,7 +174,7 @@ export class VoiceService {
             // デコード（どんな形式でも対応可能）
             const audioBuffer = await audioContext.decodeAudioData(originalArrayBuffer);
 
-            console.log('VoiceService: オーディオデコード成功', {
+            logger.log('VoiceService: オーディオデコード成功', {
               sampleRate: audioBuffer.sampleRate,
               numberOfChannels: audioBuffer.numberOfChannels,
               length: audioBuffer.length,
@@ -186,7 +187,7 @@ export class VoiceService {
             // エンコード後のWAVファイルヘッダーを確認
             const encodedBytes = new Uint8Array(encodedWavArrayBuffer);
             const formatId = encodedBytes[20] | (encodedBytes[21] << 8);
-            console.log('VoiceService: WAVエンコード成功', {
+            logger.log('VoiceService: WAVエンコード成功', {
               size: encodedWavArrayBuffer.byteLength,
               riff: String.fromCharCode(encodedBytes[0], encodedBytes[1], encodedBytes[2], encodedBytes[3]),
               wave: String.fromCharCode(encodedBytes[8], encodedBytes[9], encodedBytes[10], encodedBytes[11]),
@@ -204,7 +205,7 @@ export class VoiceService {
             await audioContext.close();
           } catch (decodeError) {
             // AudioContextでのデコードに失敗した場合は、base64-arraybufferを使用
-            console.log('VoiceService: AudioContextデコード失敗、base64-arraybufferを使用', decodeError);
+            logger.log('VoiceService: AudioContextデコード失敗、base64-arraybufferを使用', decodeError);
 
             const originalArrayBuffer = base64ToArrayBuffer(base64Data);
             const AudioContextClass = window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -214,7 +215,7 @@ export class VoiceService {
             const audioContext = new AudioContextClass();
             const audioBuffer = await audioContext.decodeAudioData(originalArrayBuffer);
 
-            console.log('VoiceService: オーディオデコード成功（フォールバック）', {
+            logger.log('VoiceService: オーディオデコード成功（フォールバック）', {
               sampleRate: audioBuffer.sampleRate,
               numberOfChannels: audioBuffer.numberOfChannels,
               length: audioBuffer.length,
@@ -230,14 +231,14 @@ export class VoiceService {
             await audioContext.close();
           }
 
-          console.log('VoiceService: Blob URLを生成', blobUrl);
+          logger.log('VoiceService: Blob URLを生成', blobUrl);
 
           // Blob URLを管理対象に追加
           this.blobUrls.add(blobUrl);
 
           return blobUrl;
         } catch (error) {
-          console.error('Base64からWAVへの変換エラー:', error);
+          logger.error('Base64からWAVへの変換エラー:', error);
           throw new Error('音声データの変換に失敗しました');
         }
       } else if (response.data.error) {
@@ -333,7 +334,7 @@ export class VoiceService {
       }
     }
 
-    console.log('VoiceService: 16ビットPCM WAVファイル生成', {
+    logger.log('VoiceService: 16ビットPCM WAVファイル生成', {
       formatId: 1,
       channels: numberOfChannels,
       sampleRate: sampleRate,
@@ -352,7 +353,7 @@ export class VoiceService {
     // Blob URLを解放
     this.blobUrls.forEach(blobUrl => {
       URL.revokeObjectURL(blobUrl);
-      console.log('VoiceService: Blob URL解放', blobUrl);
+      logger.log('VoiceService: Blob URL解放', blobUrl);
     });
     this.blobUrls.clear();
 

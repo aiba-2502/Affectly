@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import dynamic from 'next/dynamic';
 import BottomNav from '@/components/BottomNav';
+import { logger } from '@/utils/logger';
 
 // Live2Dコンポーネントを動的インポート（SSR無効化 + ローディング表示）
 const Live2DComponent = dynamic(() => import('@/components/Live2DComponent'), {
@@ -23,9 +24,9 @@ export default function Home() {
   const [showWelcomeCard, setShowWelcomeCard] = useState(true);
 
   useEffect(() => {
-    console.log('[Home] Auth check - isLoading:', isLoading, 'user:', user);
+    logger.log('[Home] Auth check - isLoading:', isLoading, 'user:', user);
     if (!isLoading && !user) {
-      console.log('[Home] No user found, redirecting to login');
+      logger.log('[Home] No user found, redirecting to login');
       router.push('/login');
     }
   }, [user, isLoading, router]);

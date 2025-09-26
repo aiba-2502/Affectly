@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { NativeLive2DWrapper } from '@/lib/live2d/NativeLive2DWrapper';
+import { logger } from '@/utils/logger';
 
 interface Live2DCharacterProps {
   modelPath?: string;
@@ -34,7 +35,7 @@ export const Live2DCharacter: React.FC<Live2DCharacterProps> = ({
         // Initialize
         const initialized = await wrapper.initialize(containerRef.current);
         if (!initialized) {
-          console.error('Failed to initialize Live2D wrapper');
+          logger.error('Failed to initialize Live2D wrapper');
           return;
         }
 
@@ -43,7 +44,7 @@ export const Live2DCharacter: React.FC<Live2DCharacterProps> = ({
         // Load model
         const loaded = await wrapper.loadModel(modelPath);
         if (!loaded) {
-          console.error('Failed to load Live2D model');
+          logger.error('Failed to load Live2D model');
           return;
         }
 
@@ -56,7 +57,7 @@ export const Live2DCharacter: React.FC<Live2DCharacterProps> = ({
         wrapper.setExpression('default');
 
       } catch (error) {
-        console.error('Live2D initialization error:', error);
+        logger.error('Live2D initialization error:', error);
       }
     };
 
@@ -97,7 +98,7 @@ export const Live2DCharacter: React.FC<Live2DCharacterProps> = ({
       wrapperRef.current.startMotion(emotion, motionPriority);
 
     } catch (error) {
-      console.error('Failed to set emotion:', error);
+      logger.error('Failed to set emotion:', error);
     }
   }, [emotion, isModelLoaded]);
 
@@ -124,7 +125,7 @@ export const Live2DCharacter: React.FC<Live2DCharacterProps> = ({
           wrapperRef.current.stopLipSync();
         }
       } catch (error) {
-        console.error('Lip sync error:', error);
+        logger.error('Lip sync error:', error);
       }
     };
 

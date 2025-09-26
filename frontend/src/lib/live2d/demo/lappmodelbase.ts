@@ -7,6 +7,7 @@
 
 import { CubismDefaultParameterId } from '../framework/cubismdefaultparameterid';
 import { CubismModelSettingJson } from '../framework/cubismmodelsettingjson';
+import { logger } from '@/utils/logger';
 import {
   BreathParameterData,
   CubismBreath
@@ -149,7 +150,7 @@ export class LAppModelBase extends CubismUserModel {
 
       // AbortControllerがない場合はスキップ
       if (!this._abortController) {
-        console.warn('AbortController not available, skipping model load');
+        logger.warn('AbortController not available, skipping model load');
         return;
       }
 
@@ -508,7 +509,7 @@ export class LAppModelBase extends CubismUserModel {
         if (this._subdelegate && this._subdelegate.getGlManager()) {
           this.getRenderer().startUp(this._subdelegate.getGlManager().getGl());
         } else {
-          console.error('Subdelegate or GlManager not available for renderer startup');
+          logger.error('Subdelegate or GlManager not available for renderer startup');
         }
       }
     };
@@ -520,7 +521,7 @@ export class LAppModelBase extends CubismUserModel {
   private setupTextures(): void {
     // subdelegateが設定されていない場合は処理をスキップ
     if (!this._subdelegate) {
-      console.warn('setupTextures: subdelegate is not set');
+      logger.warn('setupTextures: subdelegate is not set');
       return;
     }
 
@@ -538,7 +539,7 @@ export class LAppModelBase extends CubismUserModel {
       ) {
         // テクスチャ名が空文字だった場合はロード・バインド処理をスキップ
         if (this._modelSetting.getTextureFileName(modelTextureNumber) == '') {
-          console.log('getTextureFileName null');
+          logger.log('getTextureFileName null');
           continue;
         }
 
@@ -566,11 +567,11 @@ export class LAppModelBase extends CubismUserModel {
             textureManager.createTextureFromPngFile(texturePath, usePremultiply, onLoad);
             this.getRenderer().setIsPremultipliedAlpha(usePremultiply);
           } else {
-            console.error('TextureManager not available in subdelegate');
-            console.log('Subdelegate exists but TextureManager is null');
+            logger.error('TextureManager not available in subdelegate');
+            logger.log('Subdelegate exists but TextureManager is null');
           }
         } else {
-          console.error('Subdelegate not set in LAppModel');
+          logger.error('Subdelegate not set in LAppModel');
         }
       }
 
@@ -699,7 +700,7 @@ export class LAppModelBase extends CubismUserModel {
 
     // 目の向きの調整（自然な視線移動）
     if (LAppDefine.DebugLogEnable && (this._dragX !== 0 || this._dragY !== 0)) {
-      console.log(`Tracking: dragX=${this._dragX}, dragY=${this._dragY}`);
+      logger.log(`Tracking: dragX=${this._dragX}, dragY=${this._dragY}`);
     }
     const baseEyeBallX = this._model.getParameterValueById(this._idParamEyeBallX);
     const baseEyeBallY = this._model.getParameterValueById(this._idParamEyeBallY);
@@ -757,7 +758,7 @@ export class LAppModelBase extends CubismUserModel {
     this._dragManager.set(x, y);
     // デバッグ: 設定される値を確認
     if (LAppDefine.DebugLogEnable) {
-      console.log(`setMousePosition: x=${x}, y=${y}`);
+      logger.log(`setMousePosition: x=${x}, y=${y}`);
     }
   }
 
@@ -767,7 +768,7 @@ export class LAppModelBase extends CubismUserModel {
   public resetMousePosition(): void {
     this._dragManager.set(0, 0);
     if (LAppDefine.DebugLogEnable) {
-      console.log('Mouse position reset to center');
+      logger.log('Mouse position reset to center');
     }
   }
 
@@ -1021,7 +1022,7 @@ export class LAppModelBase extends CubismUserModel {
 
       // AbortControllerがない場合はスキップ
       if (!this._abortController) {
-        console.warn('AbortController not available, skipping motion load');
+        logger.warn('AbortController not available, skipping motion load');
         return;
       }
 
@@ -1089,14 +1090,14 @@ export class LAppModelBase extends CubismUserModel {
                 this._subdelegate.getGlManager().getGl()
               );
             } else {
-              console.warn('Subdelegate or GlManager not available for renderer startup, model loading cancelled');
+              logger.warn('Subdelegate or GlManager not available for renderer startup, model loading cancelled');
             }
           }
         })
         .catch(error => {
           // AbortErrorの場合はログを出さない
           if (error.name !== 'AbortError' && error.message !== 'Subdelegate is null, cancelling motion load' && error.message !== 'Subdelegate is null, cancelling motion setup') {
-            console.error('Failed to load motion:', error);
+            logger.error('Failed to load motion:', error);
           }
         });
     }
@@ -1132,7 +1133,7 @@ export class LAppModelBase extends CubismUserModel {
         viewport
       );
     } else {
-      console.error('Subdelegate not available for drawing');
+      logger.error('Subdelegate not available for drawing');
       return;
     }
     this.getRenderer().drawModel();
@@ -1183,14 +1184,14 @@ export class LAppModelBase extends CubismUserModel {
   public setSubdelegate(subdelegate: LAppSubdelegate): void {
     this._subdelegate = subdelegate;
     if (subdelegate) {
-      console.log('LAppModel: subdelegate set successfully');
+      logger.log('LAppModel: subdelegate set successfully');
       if (subdelegate.getTextureManager()) {
-        console.log('LAppModel: TextureManager is available');
+        logger.log('LAppModel: TextureManager is available');
       } else {
-        console.warn('LAppModel: TextureManager is not available in subdelegate');
+        logger.warn('LAppModel: TextureManager is not available in subdelegate');
       }
     } else {
-      console.warn('LAppModel: subdelegate is null');
+      logger.warn('LAppModel: subdelegate is null');
       // subdelegateがnullに設定されたら、進行中のロードをキャンセル
       this.cancelLoading();
     }

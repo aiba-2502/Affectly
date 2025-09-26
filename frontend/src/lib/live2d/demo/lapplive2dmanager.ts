@@ -8,6 +8,7 @@
 import { CubismMatrix44 } from '../framework/math/cubismmatrix44';
 import { ACubismMotion } from '../framework/motion/acubismmotion';
 import { csmVector } from '../framework/type/csmvector';
+import { logger } from '@/utils/logger';
 
 import * as LAppDefine from './lappdefine';
 import { LAppModel, LAppModelFactory, ScreenType } from './lappmodel';
@@ -139,7 +140,7 @@ export class LAppLive2DManager {
 
     // subdelegateが設定されていることを確認
     if (!this._subdelegate) {
-      console.error('LAppLive2DManager: subdelegate is not set');
+      logger.error('LAppLive2DManager: subdelegate is not set');
       return;
     }
 
@@ -268,11 +269,11 @@ export class LAppLive2DManager {
   // モーション再生開始のコールバック関数
   beganMotion = (self: ACubismMotion): void => {
     LAppPal.printMessage('Motion Began:');
-    console.log(self);
+    logger.log(self);
   };
   // モーション再生終了のコールバック関数
   finishedMotion = (self: ACubismMotion): void => {
     LAppPal.printMessage('Motion Finished:');
-    console.log(self);
+    logger.log(self);
   };
 }

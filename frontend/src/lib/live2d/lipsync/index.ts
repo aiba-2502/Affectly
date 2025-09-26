@@ -1,3 +1,5 @@
+import { logger } from '@/utils/logger';
+
 /**
  * LipSync Module Export
  * 音声解析とリップシンク機能のエクスポート
@@ -37,7 +39,7 @@ export * from './constants';
  * const features = analyzer.processAudioBuffer(dataArray);
  *
  * // 音声特徴を使用してリップシンク
- * console.log('RMS:', features.rms);
- * console.log('Formants:', features.formants);
+ * logger.log('RMS:', features.rms);
+ * logger.log('Formants:', features.formants);
  * ```
  */
