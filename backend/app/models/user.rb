@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class User < ApplicationRecord
+  has_secure_password
+
   # Associations
   has_many :chats, dependent: :destroy
   has_many :api_tokens, dependent: :destroy
@@ -8,13 +10,13 @@ class User < ApplicationRecord
   has_many :messages, foreign_key: :sender_id, dependent: :destroy  # RDB版メッセージとの関連（送信者として）
 
   # Validations
-  validates :name, presence: true, length: { maximum: 50 }
-  validates :email, presence: true, 
-                    length: { maximum: 255 },
+  validates :name, presence: true, length: { maximum: AppConstants::MAX_NAME_LENGTH }
+  validates :email, presence: true,
+                    length: { maximum: AppConstants::MAX_EMAIL_LENGTH },
                     uniqueness: { case_sensitive: false },
                     format: { with: URI::MailTo::EMAIL_REGEXP }
-  validates :encrypted_password, presence: true, length: { maximum: 255 }
-  validates :is_active, inclusion: { in: [true, false] }
+  validates :password, presence: true, length: { minimum: AppConstants::MIN_PASSWORD_LENGTH }, allow_nil: true
+  validates :is_active, inclusion: { in: [ true, false ] }
 
   # Callbacks
   before_save :downcase_email

@@ -24,7 +24,9 @@ Rails.application.configure do
   end
 
   # Change to :null_store to avoid any caching.
-  config.cache_store = :memory_store
+  # Use memory store for caching (without Redis dependency)
+  # Size limit prevents memory bloat
+  config.cache_store = :memory_store, { size: 32.megabytes }
 
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
@@ -46,6 +48,14 @@ Rails.application.configure do
 
   # Highlight code that triggered database queries in logs.
   config.active_record.verbose_query_logs = true
+
+  # Allow access from Docker container hostnames
+  config.hosts = [
+    "localhost",
+    "web",
+    /.*\.local/,
+    IPAddr.new("0.0.0.0/0") # Allow all IP addresses in development
+  ]
 
   # Append comments with runtime information tags to SQL queries in logs.
   config.active_record.query_log_tags_enabled = true

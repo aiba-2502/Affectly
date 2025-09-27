@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_29_000001) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_21_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -20,11 +20,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_29_000001) do
 
   create_table "api_tokens", force: :cascade do |t|
     t.bigint "user_id", null: false
-    t.string "encrypted_token", limit: 191, null: false
-    t.datetime "expires_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["encrypted_token"], name: "index_api_tokens_on_encrypted_token", unique: true
+    t.string "token_family_id"
+    t.datetime "revoked_at"
+    t.string "encrypted_access_token", limit: 191
+    t.string "encrypted_refresh_token", limit: 191
+    t.datetime "access_expires_at"
+    t.datetime "refresh_expires_at"
+    t.index ["encrypted_access_token"], name: "index_api_tokens_on_encrypted_access_token", unique: true
+    t.index ["encrypted_refresh_token"], name: "index_api_tokens_on_encrypted_refresh_token", unique: true
+    t.index ["revoked_at"], name: "index_api_tokens_on_revoked_at"
+    t.index ["token_family_id", "created_at"], name: "idx_api_tokens_chain_created"
+    t.index ["token_family_id"], name: "index_api_tokens_on_token_family_id"
     t.index ["user_id"], name: "index_api_tokens_on_user_id"
   end
 
@@ -48,9 +56,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_29_000001) do
     t.datetime "sent_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "sender_kind", null: false
     t.index ["chat_id", "sent_at"], name: "idx_messages_chat_sent"
     t.index ["chat_id"], name: "index_messages_on_chat_id"
     t.index ["sender_id"], name: "index_messages_on_sender_id"
+    t.index ["sender_kind"], name: "index_messages_on_sender_kind"
     t.index ["sent_at"], name: "index_messages_on_sent_at"
     t.check_constraint "emotion_score >= 0::numeric AND emotion_score <= 1::numeric", name: "chk_emotion_score"
   end
@@ -75,13 +85,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_29_000001) do
     t.string "category", limit: 30
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "metadata", default: {}
+    t.boolean "is_active", default: true
+    t.index ["category", "is_active"], name: "index_tags_on_category_and_is_active"
+    t.index ["category"], name: "index_tags_on_category"
+    t.index ["is_active"], name: "index_tags_on_is_active"
+    t.index ["metadata"], name: "index_tags_on_metadata", using: :gin
     t.index ["name"], name: "index_tags_on_name", unique: true
   end
 
   create_table "users", force: :cascade do |t|
     t.string "name", limit: 50, null: false
     t.string "email", limit: 255, null: false
-    t.string "encrypted_password", limit: 255, null: false
+    t.string "password_digest", limit: 255, null: false
     t.boolean "is_active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

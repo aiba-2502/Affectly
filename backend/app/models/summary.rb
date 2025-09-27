@@ -3,10 +3,10 @@
 class Summary < ApplicationRecord
   # Enums
   enum :period, {
-    session: 'session',
-    daily: 'daily',
-    weekly: 'weekly',
-    monthly: 'monthly'
+    session: "session",
+    daily: "daily",
+    weekly: "weekly",
+    monthly: "monthly"
   }, validate: true
 
   # Associations
@@ -18,11 +18,11 @@ class Summary < ApplicationRecord
   validates :tally_start_at, presence: true
   validates :tally_end_at, presence: true
   validates :analysis_data, presence: true
-  
+
   # Conditional validations based on period
   validates :chat_id, presence: true, if: :session_period?
   validates :user_id, presence: true, if: :user_period?
-  
+
   validate :validate_period_associations
   validate :validate_date_range
 
@@ -31,10 +31,10 @@ class Summary < ApplicationRecord
 
   # Scopes
   scope :by_period, ->(period) { where(period: period) }
-  scope :sessions, -> { where(period: 'session') }
-  scope :daily_summaries, -> { where(period: 'daily') }
-  scope :weekly_summaries, -> { where(period: 'weekly') }
-  scope :monthly_summaries, -> { where(period: 'monthly') }
+  scope :sessions, -> { where(period: "session") }
+  scope :daily_summaries, -> { where(period: "daily") }
+  scope :weekly_summaries, -> { where(period: "weekly") }
+  scope :monthly_summaries, -> { where(period: "monthly") }
   scope :in_date_range, ->(start_date, end_date) {
     where(tally_start_at: start_date..end_date)
   }
@@ -54,7 +54,7 @@ class Summary < ApplicationRecord
 
   def self.default_analysis_data
     {
-      summary: '',
+      summary: "",
       insights: {},
       sentiment_overview: {},
       metrics: {}
@@ -63,11 +63,11 @@ class Summary < ApplicationRecord
 
   # Instance Methods
   def session_period?
-    period == 'session'
+    period == "session"
   end
 
   def user_period?
-    period.in?(['daily', 'weekly', 'monthly'])
+    period.in?([ "daily", "weekly", "monthly" ])
   end
 
   def duration_in_days
@@ -75,40 +75,92 @@ class Summary < ApplicationRecord
   end
 
   def add_insight(key, value)
-    insights = analysis_data['insights'] || {}
+    insights = analysis_data["insights"] || {}
     insights[key.to_s] = value
-    update!(analysis_data: analysis_data.merge('insights' => insights))
+    update!(analysis_data: analysis_data.merge("insights" => insights))
   end
 
   def add_metric(key, value)
-    metrics = analysis_data['metrics'] || {}
+    metrics = analysis_data["metrics"] || {}
     metrics[key.to_s] = value
-    update!(analysis_data: analysis_data.merge('metrics' => metrics))
+    update!(analysis_data: analysis_data.merge("metrics" => metrics))
   end
 
   def update_summary(text)
-    update!(analysis_data: analysis_data.merge('summary' => text))
+    update!(analysis_data: analysis_data.merge("summary" => text))
   end
 
   def sentiment_score
-    analysis_data.dig('sentiment_overview', 'overall_score')
+    analysis_data.dig("sentiment_overview", "overall_score")
+  end
+
+  # AI分析結果を取得
+  def ai_analysis_data
+    analysis_data.slice("strengths", "thinking_patterns", "values")
+  end
+
+  # 新規分析が必要かチェック
+  def needs_new_analysis?
+    return false unless user
+
+    # ユーザーが送信したメッセージのみをカウント (Message::SENDER_USER = "USER")
+    total_user_messages = user.messages.where(sender_kind: "USER").count
+
+    # 分析済みのデータが存在するかチェック
+    analyzed_data_exists = analysis_data.present? && analysis_data["analyzed_at"].present?
+
+    # 開発環境用に要件を緩和（ユーザーメッセージのみカウント）
+    required_messages = Rails.env.development? ? 3 : 4
+    required_new_messages = Rails.env.development? ? 2 : 4
+
+    if !analyzed_data_exists
+      # 初回分析の条件（ユーザーメッセージ数）
+      total_user_messages >= required_messages
+    else
+      # 前回分析以降の新規ユーザーメッセージ数
+      new_user_messages = user.messages
+                              .where(sender_kind: "USER")
+                              .where("messages.sent_at > ?", analysis_data["analyzed_at"])
+                              .count
+      # 追加分析の条件
+      new_user_messages >= required_new_messages
+    end
+  end
+
+  # 前回分析からの新規メッセージ数を取得
+  def messages_since_analysis
+    return 0 unless user
+    return user.messages.count unless analysis_data.present? && analysis_data["analyzed_at"].present?
+
+    user.messages.where("messages.sent_at > ?", analysis_data["analyzed_at"]).count
+  end
+
+  # 最後の分析からの経過日数
+  def days_since_analysis
+    ((Time.current - updated_at) / 1.day).round
+  end
+
+  # スコープ追加: ユーザーの分析結果
+  def self.user_analyses(user_id)
+    where(user_id: user_id, period: [ "weekly", "monthly" ])
+      .order(created_at: :desc)
   end
 
   private
 
   def validate_period_associations
     if session_period? && user_id.present?
-      errors.add(:user_id, 'はセッションサマリーでは設定できません')
+      errors.add(:user_id, "はセッションサマリーでは設定できません")
     elsif user_period? && chat_id.present?
-      errors.add(:chat_id, 'はユーザー期間サマリーでは設定できません')
+      errors.add(:chat_id, "はユーザー期間サマリーでは設定できません")
     end
   end
 
   def validate_date_range
     return unless tally_start_at && tally_end_at
-    
+
     if tally_end_at < tally_start_at
-      errors.add(:tally_end_at, 'は開始日時より後である必要があります')
+      errors.add(:tally_end_at, "は開始日時より後である必要があります")
     end
   end
 
