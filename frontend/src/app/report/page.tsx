@@ -10,6 +10,8 @@ import reportService from '@/services/reportService';
 import PersonalAdviceSection from '@/components/PersonalAdviceSection';
 import dynamic from 'next/dynamic';
 import { logger } from '@/utils/logger';
+import { translateEmotion } from '@/utils/emotionTranslations';
+import AnalysisModal from '@/components/AnalysisModal';
 
 // Live2Dコンポーネントを動的インポート（SSR無効化）- コンテナ内表示版
 const Live2DContainedComponent = dynamic(() => import('@/components/Live2DContainedComponent'), {
@@ -251,7 +253,7 @@ export default function ReportPage() {
       {/* Main Content - 左右分割レイアウト */}
       <div className="flex-1 flex relative overflow-hidden">
         {/* 左カラム - Live2D Character エリア - 拡大版 */}
-        <div className="w-80 lg:w-96 xl:w-[28rem] bg-transparent border-r border-gray-200 flex-shrink-0 relative overflow-hidden">
+        <div className="w-80 lg:w-96 xl:w-[28rem] bg-transparent border-r border-gray-200 flex-shrink-0 relative overflow-hidden h-[calc(100vh-5rem)] max-h-[600px]">
           {/* Live2Dコンポーネントを配置 - コンテナ全域を表示領域として使用 */}
           {showLive2D ? (
             <div className="absolute inset-0">
@@ -408,7 +410,7 @@ export default function ReportPage() {
                       {currentReport.emotionKeywords.map((item) => (
                         <div key={item.emotion} className="flex items-start">
                           <span className="font-medium text-gray-700 min-w-[80px]">
-                            {item.emotion}
+                            {translateEmotion(item.emotion)}
                           </span>
                           <span className="text-gray-500 mx-2">→</span>
                           <span className="text-gray-600">
@@ -428,6 +430,7 @@ export default function ReportPage() {
       </div>
 
       <BottomNav />
+      <AnalysisModal isOpen={isAnalyzing} />
     </div>
   );
 }
