@@ -109,9 +109,9 @@ class Summary < ApplicationRecord
     # 分析済みのデータが存在するかチェック
     analyzed_data_exists = analysis_data.present? && analysis_data["analyzed_at"].present?
 
-    # 開発環境用に要件を緩和（ユーザーメッセージのみカウント）
-    required_messages = Rails.env.development? ? 3 : 4
-    required_new_messages = Rails.env.development? ? 2 : 4
+    # 4メッセージごとにAI分析を実行可能にする（開発環境・本番環境共通）
+    required_messages = 4  # 初回分析は4メッセージ
+    required_new_messages = 4  # 2回目以降も4メッセージごと
 
     if !analyzed_data_exists
       # 初回分析の条件（ユーザーメッセージ数）

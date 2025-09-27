@@ -35,11 +35,8 @@ export default function ReportPage() {
   const [reportData, setReportData] = useState<UserReport | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [showLive2D, setShowLive2D] = useState(false);
-  const [needsAnalysis, setNeedsAnalysis] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
-  const [lastExecutionTime, setLastExecutionTime] = useState<Date | null>(null);
-  const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -65,7 +62,7 @@ export default function ReportPage() {
     }
   }, [user]);
 
-  // ページフォーカス時の自動更新と定期更新
+  // ページフォーカス時の自動更新
   useEffect(() => {
     const handleFocus = () => {
       if (user && !isAnalyzing) {
@@ -77,47 +74,11 @@ export default function ReportPage() {
     // ページフォーカスイベントリスナー
     window.addEventListener('focus', handleFocus);
 
-    // 定期的な更新（30秒ごと）
-    const interval = setInterval(() => {
-      if (user && !isAnalyzing) {
-        logger.log('定期更新 - レポートデータを更新');
-        fetchReportData();
-      }
-    }, 30000); // 30秒ごと
-
     return () => {
       window.removeEventListener('focus', handleFocus);
-      clearInterval(interval);
     };
   }, [user, isAnalyzing]);
 
-  // クールダウンタイマー
-  useEffect(() => {
-    if (!lastExecutionTime) return;
-
-    const updateCooldown = () => {
-      const elapsed = Date.now() - lastExecutionTime.getTime();
-      const remaining = Math.max(0, 60000 - elapsed); // 60秒 = 60000ms
-      setCooldownRemaining(Math.ceil(remaining / 1000)); // 秒単位に変換
-
-      if (remaining > 0) {
-        return true; // 継続
-      }
-      return false; // 終了
-    };
-
-    // 初回更新
-    if (!updateCooldown()) return;
-
-    // 1秒ごとに更新
-    const interval = setInterval(() => {
-      if (!updateCooldown()) {
-        clearInterval(interval);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [lastExecutionTime]);
 
   const fetchReportData = async () => {
     try {
@@ -133,40 +94,30 @@ export default function ReportPage() {
       // APIからレポートデータを取得（分析必要性チェック付き）
       const response = await reportService.getReport();
 
-      // needsAnalysisプロパティが存在する場合
-      if ('needsAnalysis' in response) {
-        setNeedsAnalysis(response.needsAnalysis);
+      // レポートデータを設定
+      if ('lastAnalyzedAt' in response) {
+        setLastAnalyzedAt(response.lastAnalyzedAt);
+      }
 
-        if ('lastAnalyzedAt' in response) {
-          setLastAnalyzedAt(response.lastAnalyzedAt);
-        }
-
-        if (response.needsAnalysis === true) {
-          // needsAnalysisがtrueの場合
-          // 既存データがあれば表示
-          if (response.existingData) {
-            setReportData(response.existingData);
-          }
-        } else if (response.needsAnalysis === false) {
-          // needsAnalysisがfalseの場合、responseはUserReportを拡張したもの
-          // TypeScript の型ガードで正しく推論させる
-          const reportWithoutAnalysis = response;
-          const userReport: UserReport = {
-            userId: reportWithoutAnalysis.userId,
-            userName: reportWithoutAnalysis.userName,
-            strengths: reportWithoutAnalysis.strengths,
-            thinkingPatterns: reportWithoutAnalysis.thinkingPatterns,
-            values: reportWithoutAnalysis.values,
-            personalAdvice: reportWithoutAnalysis.personalAdvice,
-            conversationReport: reportWithoutAnalysis.conversationReport,
-            updatedAt: reportWithoutAnalysis.updatedAt
-          };
-          setReportData(userReport);
-        }
+      // existingDataがあればそれを使用、なければresponseを直接使用
+      if ('existingData' in response && response.existingData) {
+        setReportData(response.existingData);
       } else {
-        // 通常のレポートデータ（後方互換性のため）
-        setReportData(response);
-        setNeedsAnalysis(false);
+        // responseからUserReport型のデータを抽出
+        const userReport: UserReport = {
+          userId: response.userId || user.id.toString(),
+          userName: response.userName || user.name,
+          strengths: response.strengths || [],
+          thinkingPatterns: response.thinkingPatterns || [],
+          values: response.values || [],
+          personalAdvice: response.personalAdvice || null,
+          conversationReport: response.conversationReport || {
+            week: { period: 'week', summary: null, frequentKeywords: [], emotionKeywords: [] },
+            month: { period: 'month', summary: null, frequentKeywords: [], emotionKeywords: [] }
+          },
+          updatedAt: response.updatedAt || new Date().toISOString()
+        };
+        setReportData(userReport);
       }
     } catch (error) {
       logger.error('レポートデータの取得に失敗しました:', error);
@@ -176,14 +127,8 @@ export default function ReportPage() {
     }
   };
 
-  // AI分析を手動実行
+  // AI分析を手動実行（制限なし）
   const handleExecuteAnalysis = async () => {
-    // クールダウンチェック
-    if (cooldownRemaining > 0) {
-      alert(`分析は${cooldownRemaining}秒後に実行可能になります。`);
-      return;
-    }
-
     try {
       setIsAnalyzing(true);
       logger.log('AI分析を開始します...');
@@ -194,10 +139,7 @@ export default function ReportPage() {
       logger.log(`AI分析が完了しました（${(endTime - startTime) / 1000}秒）`);
 
       setReportData(data);
-      setNeedsAnalysis(false);
       setLastAnalyzedAt(new Date().toISOString());
-      setLastExecutionTime(new Date()); // 実行時刻を記録
-      setCooldownRemaining(60); // 60秒のクールダウン開始
     } catch (error) {
       logger.error('AI分析に失敗しました:', error);
       alert('分析に失敗しました。しばらくしてから再試行してください。');
@@ -222,54 +164,41 @@ export default function ReportPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* 分析通知バナー（常時表示） */}
+      {/* AI分析バナー（常時表示） */}
       <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            {needsAnalysis && (
-              <p className="text-sm text-blue-900 font-medium">
-                新しいメッセージが追加されました。AI分析を実行できます。
-              </p>
-            )}
+            <p className="text-sm text-blue-900 font-medium">
+              AI分析でレポートを更新できます
+            </p>
             {lastAnalyzedAt && (
-              <p className={`text-xs text-blue-700 ${needsAnalysis ? 'mt-1' : ''}`}>
+              <p className="text-xs text-blue-700 mt-1">
                 最終分析: {new Date(lastAnalyzedAt).toLocaleString('ja-JP')}
               </p>
             )}
           </div>
           <div className="flex items-center space-x-3">
-            {needsAnalysis && (
-              <>
-                {cooldownRemaining > 0 && (
-                  <div className="text-sm text-blue-700">
-                    <span className="font-medium">{cooldownRemaining}秒</span>後に再実行可能
-                  </div>
-                )}
-                <button
-                  onClick={handleExecuteAnalysis}
-                  disabled={isAnalyzing || cooldownRemaining > 0}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                    isAnalyzing || cooldownRemaining > 0
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
-                >
-                  {isAnalyzing ? (
-                    <span className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      AI分析中...
-                    </span>
-                  ) : cooldownRemaining > 0 ? (
-                    `待機中 (${cooldownRemaining}秒)`
-                  ) : (
-                    'AI分析を実行'
-                  )}
-                </button>
-              </>
-            )}
+            <button
+              onClick={handleExecuteAnalysis}
+              disabled={isAnalyzing}
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                isAnalyzing
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {isAnalyzing ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  AI分析中...
+                </span>
+              ) : (
+                'AI分析を実行'
+              )}
+            </button>
           </div>
         </div>
       </div>
