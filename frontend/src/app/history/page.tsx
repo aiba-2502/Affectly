@@ -8,10 +8,6 @@ import { HistoryList } from '@/components/History/HistoryList';
 import dynamic from 'next/dynamic';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { useChatStore } from '@/stores/chatStore';
-import AnalysisNotification from '@/components/AnalysisNotification';
-import { useNotificationStore } from '@/stores/notificationStore';
-import reportService from '@/services/reportService';
-import { logger } from '@/utils/logger';
 
 // Live2Dコンポーネントを動的インポート（SSR無効化）- コンテナ内表示版
 const Live2DContainedComponent = dynamic(() => import('@/components/Live2DContainedComponent'), {
@@ -33,7 +29,6 @@ export default function HistoryPage() {
   const router = useRouter();
   const { newSession } = useChatStore();
   const [showLive2D, setShowLive2D] = useState(false);
-  const { showAnalysisNotification, dismissNotification, checkAndShowNotification } = useNotificationStore();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -51,32 +46,6 @@ export default function HistoryPage() {
     }
   }, [user]);
 
-  // AI分析通知のチェック
-  useEffect(() => {
-    const checkAnalysisStatus = async () => {
-      if (user) {
-        try {
-          const token = localStorage.getItem('access_token');
-          if (token) {
-            reportService.setToken(token);
-            const response = await reportService.getReport();
-
-            if ('needsAnalysis' in response) {
-              checkAndShowNotification(response.needsAnalysis);
-            }
-          }
-        } catch (error) {
-          logger.error('Failed to check analysis status:', error);
-        }
-      }
-    };
-
-    checkAnalysisStatus();
-    // 30秒ごとにチェック
-    const interval = setInterval(checkAnalysisStatus, 30000);
-
-    return () => clearInterval(interval);
-  }, [user, checkAndShowNotification]);
 
   const handleNewChat = () => {
     newSession();
@@ -97,10 +66,6 @@ export default function HistoryPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <AnalysisNotification
-        show={showAnalysisNotification}
-        onClose={dismissNotification}
-      />
       {/* Main Content - 左右分割レイアウト */}
       <div className="flex-1 flex relative overflow-hidden">
         {/* Left Side - Live2D Character エリア - 拡大版 */}
