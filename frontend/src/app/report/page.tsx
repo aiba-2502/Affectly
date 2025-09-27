@@ -272,11 +272,14 @@ export default function ReportPage() {
         </div>
 
         {/* 右カラム - レポートコンテンツ */}
-        <div className="flex-1 overflow-y-auto bg-transparent pb-24 scrollbar-thin">
-          <div className="container mx-auto px-4 py-6 max-w-4xl">
-            {/* AI分析セクション */}
-            <div className="space-y-6 mb-8">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="flex-1 flex flex-col bg-transparent">
+          <div className="flex-1 overflow-y-auto scrollbar-thin pb-24">
+            <div className="container mx-auto px-4 py-6 max-w-4xl">
+              {/* AI分析セクション - 高さ制限とスクロール設定 */}
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">AI分析結果</h2>
+                <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 rounded-lg border border-gray-200 p-4 bg-white/50">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* 強みカード */}
                 <div className="bg-white/75 backdrop-blur-sm border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">
@@ -336,11 +339,12 @@ export default function ReportPage() {
                     )}
                   </div>
                 </div>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* 会話分析セクション */}
-            <div className="bg-white/75 backdrop-blur-sm rounded-lg shadow-sm">
+              {/* 会話分析セクション - 高さ制限とスクロール設定 */}
+              <div className="bg-white/75 backdrop-blur-sm rounded-lg shadow-sm max-h-[42rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               {/* タブ */}
               <div className="border-b border-gray-200">
                 <div className="flex">
@@ -424,6 +428,7 @@ export default function ReportPage() {
                   )}
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </div>
