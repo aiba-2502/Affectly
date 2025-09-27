@@ -253,7 +253,7 @@ export default function ReportPage() {
       {/* Main Content - 左右分割レイアウト */}
       <div className="flex-1 flex relative overflow-hidden">
         {/* 左カラム - Live2D Character エリア - 拡大版 */}
-        <div className="w-80 lg:w-96 xl:w-[28rem] bg-transparent border-r border-gray-200 flex-shrink-0 relative overflow-hidden h-[calc(100vh-5rem)] max-h-[600px]">
+        <div className="w-80 lg:w-96 xl:w-[28rem] bg-transparent border-r border-gray-200 flex-shrink-0 relative overflow-hidden">
           {/* Live2Dコンポーネントを配置 - コンテナ全域を表示領域として使用 */}
           {showLive2D ? (
             <div className="absolute inset-0">
@@ -272,7 +272,7 @@ export default function ReportPage() {
         </div>
 
         {/* 右カラム - レポートコンテンツ */}
-        <div className="flex-1 overflow-y-auto bg-transparent pb-28 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto bg-transparent pb-24 scrollbar-thin">
           <div className="container mx-auto px-4 py-6 max-w-4xl">
             {/* AI分析セクション */}
             <div className="space-y-6 mb-8">
