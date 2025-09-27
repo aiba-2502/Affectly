@@ -20,20 +20,10 @@ class ReportService
   def generate_report
     existing_summary = find_or_create_current_summary
 
-    if existing_summary.needs_new_analysis?
-      {
-        needsAnalysis: true,
-        lastAnalyzedAt: existing_summary.analysis_data["analyzed_at"] || existing_summary.updated_at,
-        existingData: parse_existing_analysis(existing_summary),
-        message: "新しいメッセージが追加されました。AI分析を実行できます。",
-        messagesSinceAnalysis: existing_summary.messages_since_analysis
-      }
-    else
-      result = parse_existing_analysis(existing_summary)
-      result[:needsAnalysis] = false
-      result[:lastAnalyzedAt] = existing_summary.analysis_data["analyzed_at"] || existing_summary.updated_at
-      result
-    end
+    # 常に既存のデータを返す（条件チェックなし）
+    result = parse_existing_analysis(existing_summary)
+    result[:lastAnalyzedAt] = existing_summary.analysis_data["analyzed_at"] || existing_summary.updated_at
+    result
   end
 
   def execute_analysis

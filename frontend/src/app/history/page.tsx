@@ -46,6 +46,7 @@ export default function HistoryPage() {
     }
   }, [user]);
 
+
   const handleNewChat = () => {
     newSession();
     router.push('/chat');

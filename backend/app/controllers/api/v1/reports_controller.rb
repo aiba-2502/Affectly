@@ -10,20 +10,9 @@ module Api
         render json: report_data
       end
 
-      # 手動分析実行
+      # 手動分析実行（レート制限なし）
       def analyze
-        # レート制限チェック（1分に1回まで）
-        if rate_limited?
-          render json: {
-            error: "分析は1分に1回まで実行可能です。しばらくお待ちください。",
-            retry_after: rate_limit_retry_after
-          }, status: :too_many_requests
-          return
-        end
-
-        # レート制限カウンターを記録
-        record_rate_limit
-
+        # レート制限を削除 - 何度でも実行可能
         analysis_result = @report_service.execute_analysis
         render json: analysis_result
       rescue => e

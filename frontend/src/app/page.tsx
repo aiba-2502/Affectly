@@ -38,6 +38,7 @@ export default function Home() {
     }
   }, [user]);
 
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">

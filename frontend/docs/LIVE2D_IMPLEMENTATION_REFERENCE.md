@@ -743,6 +743,3 @@ const handleMouseMove = (e: MouseEvent) => {
 - [Cubism SDK Manual](https://docs.live2d.com/cubism-sdk-manual/top/)
 - [Web Audio API - MDN](https://developer.mozilla.org/docs/Web/API/Web_Audio_API)
 
----
-
-*本ドキュメントは、Live2D実装の完全なリファレンスとして継続的に更新されます。*

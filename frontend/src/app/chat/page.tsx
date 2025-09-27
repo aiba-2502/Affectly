@@ -19,6 +19,7 @@ export default function ChatPage() {
     }
   }, [user, isLoading, router]);
 
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
