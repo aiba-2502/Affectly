@@ -106,10 +106,20 @@ class ReportService
       strengths: data["strengths"] || [],
       thinkingPatterns: data["thinking_patterns"] || [],
       values: data["values"] || [],
-      personalAdvice: data["personal_advice"] || @analyzers[:personal_advice].analyze,
+      personalAdvice: data["personal_advice"] || nil,
       conversationReport: data["conversation_report"] || {
-        week: @analyzers[:conversations].weekly_report,
-        month: @analyzers[:conversations].monthly_report
+        week: {
+          period: "week",
+          summary: nil,
+          frequentKeywords: [],
+          emotionKeywords: []
+        },
+        month: {
+          period: "month",
+          summary: nil,
+          frequentKeywords: [],
+          emotionKeywords: []
+        }
       },
       updatedAt: (summary.updated_at || Time.current).iso8601
     }
