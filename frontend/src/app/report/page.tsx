@@ -103,21 +103,8 @@ export default function ReportPage() {
       if ('existingData' in response && response.existingData) {
         setReportData(response.existingData);
       } else {
-        // responseからUserReport型のデータを抽出
-        const userReport: UserReport = {
-          userId: response.userId || user.id.toString(),
-          userName: response.userName || user.name,
-          strengths: response.strengths || [],
-          thinkingPatterns: response.thinkingPatterns || [],
-          values: response.values || [],
-          personalAdvice: response.personalAdvice || null,
-          conversationReport: response.conversationReport || {
-            week: { period: 'week', summary: null, frequentKeywords: [], emotionKeywords: [] },
-            month: { period: 'month', summary: null, frequentKeywords: [], emotionKeywords: [] }
-          },
-          updatedAt: response.updatedAt || new Date().toISOString()
-        };
-        setReportData(userReport);
+        // responseを直接UserReportとして使用（型アサーション）
+        setReportData(response as UserReport);
       }
     } catch (error) {
       logger.error('レポートデータの取得に失敗しました:', error);
