@@ -38,7 +38,6 @@ export default function ReportPage() {
   const [needsAnalysis, setNeedsAnalysis] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
-  const [analysisMessage, setAnalysisMessage] = useState('');
   const [lastExecutionTime, setLastExecutionTime] = useState<Date | null>(null);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
@@ -65,6 +64,32 @@ export default function ReportPage() {
       return () => clearTimeout(timer);
     }
   }, [user]);
+
+  // ページフォーカス時の自動更新と定期更新
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user && !isAnalyzing) {
+        logger.log('ページフォーカス検出 - レポートデータを更新');
+        fetchReportData();
+      }
+    };
+
+    // ページフォーカスイベントリスナー
+    window.addEventListener('focus', handleFocus);
+
+    // 定期的な更新（30秒ごと）
+    const interval = setInterval(() => {
+      if (user && !isAnalyzing) {
+        logger.log('定期更新 - レポートデータを更新');
+        fetchReportData();
+      }
+    }, 30000); // 30秒ごと
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, [user, isAnalyzing]);
 
   // クールダウンタイマー
   useEffect(() => {
@@ -118,7 +143,6 @@ export default function ReportPage() {
 
         if (response.needsAnalysis === true) {
           // needsAnalysisがtrueの場合
-          setAnalysisMessage(response.message);
           // 既存データがあれば表示
           if (response.existingData) {
             setReportData(response.existingData);

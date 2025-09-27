@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import dynamic from 'next/dynamic';
 import BottomNav from '@/components/BottomNav';
+import AnalysisNotification from '@/components/AnalysisNotification';
+import { useNotificationStore } from '@/stores/notificationStore';
+import reportService from '@/services/reportService';
 import { logger } from '@/utils/logger';
 
 // Live2Dコンポーネントを動的インポート（SSR無効化 + ローディング表示）
@@ -22,6 +25,7 @@ export default function Home() {
   const router = useRouter();
   const [showLive2D, setShowLive2D] = useState(false);
   const [showWelcomeCard, setShowWelcomeCard] = useState(true);
+  const { showAnalysisNotification, dismissNotification, checkAndShowNotification } = useNotificationStore();
 
   useEffect(() => {
     logger.log('[Home] Auth check - isLoading:', isLoading, 'user:', user);
@@ -38,6 +42,33 @@ export default function Home() {
     }
   }, [user]);
 
+  // AI分析通知のチェック
+  useEffect(() => {
+    const checkAnalysisStatus = async () => {
+      if (user) {
+        try {
+          const token = localStorage.getItem('access_token');
+          if (token) {
+            reportService.setToken(token);
+            const response = await reportService.getReport();
+
+            if ('needsAnalysis' in response) {
+              checkAndShowNotification(response.needsAnalysis);
+            }
+          }
+        } catch (error) {
+          logger.error('Failed to check analysis status:', error);
+        }
+      }
+    };
+
+    checkAnalysisStatus();
+    // 30秒ごとにチェック
+    const interval = setInterval(checkAnalysisStatus, 30000);
+
+    return () => clearInterval(interval);
+  }, [user, checkAndShowNotification]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -53,6 +84,10 @@ export default function Home() {
   return (
     <>
       {showLive2D && <Live2DComponent />}
+      <AnalysisNotification
+        show={showAnalysisNotification}
+        onClose={dismissNotification}
+      />
       <div className="flex flex-col items-center justify-center min-h-screen relative z-10 pt-16 pb-24">
         {showWelcomeCard && (
           <div className="bg-white/75 backdrop-blur-sm shadow-lg rounded-lg p-6 max-w-md relative">
