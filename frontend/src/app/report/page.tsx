@@ -12,6 +12,9 @@ import dynamic from 'next/dynamic';
 import { logger } from '@/utils/logger';
 import { translateEmotion } from '@/utils/emotionTranslations';
 import AnalysisModal from '@/components/AnalysisModal';
+import InsufficientDataModal from '@/components/InsufficientDataModal';
+import { chatApi } from '@/services/chatApi';
+import { useChatStore } from '@/stores/chatStore';
 
 // Live2Dコンポーネントを動的インポート（SSR無効化）- コンテナ内表示版
 const Live2DContainedComponent = dynamic(() => import('@/components/Live2DContainedComponent'), {
@@ -37,6 +40,9 @@ export default function ReportPage() {
   const [showLive2D, setShowLive2D] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
+  const [showInsufficientDataModal, setShowInsufficientDataModal] = useState(false);
+  const [currentMessageCount, setCurrentMessageCount] = useState(0);
+  const { sessionId } = useChatStore();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -46,9 +52,10 @@ export default function ReportPage() {
 
 
   useEffect(() => {
-    // レポートデータを取得
+    // レポートデータとメッセージ数を取得
     if (user) {
       fetchReportData();
+      fetchMessageCount();
     }
   }, [user]);
 
@@ -68,6 +75,7 @@ export default function ReportPage() {
       if (user && !isAnalyzing) {
         logger.log('ページフォーカス検出 - レポートデータを更新');
         fetchReportData();
+        fetchMessageCount();
       }
     };
 
@@ -114,9 +122,35 @@ export default function ReportPage() {
     }
   };
 
-  // AI分析を手動実行（制限なし）
+  // チャットレコード数を取得
+  const fetchMessageCount = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        chatApi.setToken(token);
+      }
+      // 全セッションのメッセージを取得（現在のセッションではなく全体）
+      const response = await chatApi.getMessages(undefined, 1, 1);
+      setCurrentMessageCount(response.total_count);
+      return response.total_count;
+    } catch (error) {
+      logger.error('メッセージ数の取得に失敗しました:', error);
+      return 0;
+    }
+  };
+
+  // AI分析を手動実行（4件以上のチャットが必要）
   const handleExecuteAnalysis = async () => {
     try {
+      // メッセージ数をチェック
+      const messageCount = await fetchMessageCount();
+
+      // 4件未満の場合はモーダルを表示
+      if (messageCount < 4) {
+        setShowInsufficientDataModal(true);
+        return;
+      }
+
       setIsAnalyzing(true);
       logger.log('AI分析を開始します...');
 
@@ -376,6 +410,12 @@ export default function ReportPage() {
 
       <BottomNav />
       <AnalysisModal isOpen={isAnalyzing} />
+      <InsufficientDataModal
+        isOpen={showInsufficientDataModal}
+        onClose={() => setShowInsufficientDataModal(false)}
+        currentMessageCount={currentMessageCount}
+        requiredMessageCount={4}
+      />
     </div>
   );
 }

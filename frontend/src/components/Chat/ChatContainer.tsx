@@ -52,7 +52,7 @@ export const ChatContainer: React.FC = () => {
     if (!hasAddedGreetingRef.current) {
       const greetingMessage = {
         id: uuidv4(),
-        content: '今日はどうしたの？なんでもお話し聞かせてください',
+        content: 'なんでもお話し聞かせてください！',
         role: 'assistant' as const,
         session_id: sessionId,
         created_at: new Date().toISOString(),
