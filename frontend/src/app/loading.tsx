@@ -7,7 +7,7 @@ export default function Loading() {
           <div className="w-16 h-16 bg-blue-500 rounded-full animate-ping absolute top-0 left-0 animation-delay-200"></div>
           <div className="w-16 h-16 bg-blue-500 rounded-full absolute top-0 left-0"></div>
         </div>
-        <p className="mt-4 text-lg text-gray-600">心のログを起動中...</p>
+        <p className="mt-4 text-lg text-gray-600">Affectlyを起動中...</p>
       </div>
     </div>
   );

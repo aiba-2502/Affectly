@@ -11,7 +11,7 @@ class DynamicPromptService
     question_count = count_recent_questions
 
     base_prompt = <<~PROMPT
-      あなたは「心のログ」というサービスのAIアシスタントです。
+      あなたは「Affectly」というサービスのAIアシスタントです。
       ユーザーの感情や思考を言語化し、整理するお手伝いをします。
 
       【最重要原則】質問の適切な制御

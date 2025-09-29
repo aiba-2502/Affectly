@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "心のログ - Kokoro Log",
+  title: "Affectly - Kokoro Log",
   description: "AI VTuber-powered emotional journaling application",
 };
 

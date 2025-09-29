@@ -41,7 +41,7 @@ export default function Header() {
           {/* ロゴ - 左側固定幅 */}
           <div className="w-40 lg:w-48 xl:w-56 flex-shrink-0">
             <Link href="/" className="text-lg sm:text-xl font-bold text-gray-900 hover:text-gray-700 transition-colors inline-block">
-              心のログ
+              Affectly
             </Link>
           </div>
 

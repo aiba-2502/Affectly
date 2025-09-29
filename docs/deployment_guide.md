@@ -1,8 +1,8 @@
-# 心のログ - 本番環境デプロイガイド
+# Affectly - 本番環境デプロイガイド
 
 ## 概要
 
-このドキュメントは「心のログ」アプリケーションを本番環境にデプロイするための完全ガイドです。
+このドキュメントは「Affectly」アプリケーションを本番環境にデプロイするための完全ガイドです。
 
 ### デプロイ構成
 - **フロントエンド**: Vercel（Next.js専用プラットフォーム）
@@ -185,7 +185,7 @@ Vercel ダッシュボードの「Settings」→「Environment Variables」で�
 NEXT_PUBLIC_API_URL=https://your-backend.railway.app
 
 # その他の公開環境変数（必要に応じて）
-NEXT_PUBLIC_APP_NAME=心のログ
+NEXT_PUBLIC_APP_NAME=Affectly
 ```
 
 ### Step 6: デプロイ実行
@@ -614,7 +614,7 @@ production:
 
 ## 完了！
 
-以上で「心のログ」アプリケーションの本番環境デプロイが完了です。
+以上で「Affectly」アプリケーションの本番環境デプロイが完了です。
 
 ### 次のステップ
 1. カスタムドメインの設定

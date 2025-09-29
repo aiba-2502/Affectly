@@ -1,4 +1,4 @@
-# 心のログ (Kokoro Log) 開発用 Makefile
+# Affectly (Kokoro Log) 開発用 Makefile
 
 .PHONY: help
 .PHONY: up down build restart logs logs-all ps stats
@@ -11,7 +11,7 @@
 
 # デフォルトターゲット
 help: ## このヘルプを表示
-	@echo "心のログ (Kokoro Log) - 開発用コマンド"
+	@echo "Affectly (Kokoro Log) - 開発用コマンド"
 	@echo ""
 	@echo "使用方法: make [コマンド]"
 	@echo ""
