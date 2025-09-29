@@ -1,5 +1,6 @@
 ## サービス名
-「Affectly」 感情（affect）＋ly
+- サービス名：「Affectly」 
+- 命名背景：感情（affect）＋ly
 
 ## サービス概要
 「Affectly」は、AI VTuberとLINEのようなチャット形式で会話をしながら、  
