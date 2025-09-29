@@ -95,19 +95,95 @@
 - 感情タグによるログフィルタ機能（「怒り」「逃げたい」で絞り込み）
 - 感情傾向の可視化（感情カレンダー（週／月））
 
-## 機能の実装方針
+## 技術スタック
 
-| 機能                        | 実装予定技術／ライブラリ                     |
+### バックエンド
+| 機能                        | 使用技術／ライブラリ                          |
 |-----------------------------|----------------------------------------------|
-| チャットUI                  | Next.js + TailwindCSS + Zustand              |
-| 音声入力・音声認識          | Web Speech API / Whisper API                |
-| AI応答生成（深掘り）         | OpenAI GPT-4o          |
-| アバター表示・リアクション・音声再生   | Live2D / Vtuber.js / pixi-live2d            |
-| ログイン         | Rails                         |
-| 会話ログ保存・感情メタ情報  | Rails + PostgreSQL                          |
-| 感情カレンダー         | Chart.js /Recharts                         |
+| フレームワーク              | Ruby on Rails 8.0.2 (API mode)               |
+| データベース                | PostgreSQL 16                                |
+| 認証                        | JWT + bcrypt                                 |
+| AI応答生成                  | OpenAI GPT-4o / Anthropic Claude / Gemini    |
+| APIドキュメント            | Rails Routes                                 |
+| CORS対応                    | rack-cors                                    |
 
-※使用ライブラリは変更の可能性あり
+### フロントエンド
+| 機能                        | 使用技術／ライブラリ                          |
+|-----------------------------|----------------------------------------------|
+| フレームワーク              | Next.js 15.5.0 + React 19.1.0               |
+| スタイリング                | TailwindCSS v4                              |
+| 状態管理                    | Zustand                                      |
+| HTTPクライアント            | Axios                                        |
+| 型チェック                  | TypeScript 5.9                               |
+| チャットUI                  | カスタムコンポーネント（LINE風デザイン）     |
+| 音声入力・認識              | Web Speech API / Whisper API（予定）        |
+| アバター表示                | Live2D / pixi-live2d（実装予定）            |
+| グラフ・可視化              | Chart.js / Recharts（実装予定）             |
+
+### インフラ・開発環境
+| 項目                        | 使用技術                                      |
+|-----------------------------|----------------------------------------------|
+| コンテナ化                  | Docker + Docker Compose                      |
+| 開発環境管理                | Makefile（コマンド自動化）                   |
+| コード品質                  | Rubocop + ESLint + Prettier                 |
+| テスト                      | RSpec (Rails) + Jest (Next.js)              |
+
+## MVPデプロイ環境
+
+### 開発環境
+- **フロントエンド**: http://localhost:3001
+- **バックエンドAPI**: http://localhost:3000
+- **データベース**: PostgreSQL on Docker (port: 5432)
+- **開発用コマンド**: Makefile経由で全操作を管理
+
+### 本番（MVP）環境構成
+- **フロントエンド**: [Vercel](https://vercel.com/)（Next.js専用プラットフォーム）
+- **バックエンドAPI**: [Railway](https://railway.app/)（Rails API + PostgreSQL）
+- **推定月額コスト**: 約1,000〜3,000円
+
+#### アーキテクチャ
+```
+┌─────────────────┐     ┌─────────────────┐
+│   ユーザー       │────▶│    Vercel       │
+└─────────────────┘     │   (Next.js)     │
+                        │   Frontend      │
+                        └────────┬────────┘
+                                 │ HTTPS
+                        ┌────────▼────────┐
+                        │    Railway      │
+                        │   (Rails API)   │
+                        │    Backend      │
+                        └────────┬────────┘
+                                 │
+                        ┌────────▼────────┐
+                        │   PostgreSQL    │
+                        │   (Railway)     │
+                        └─────────────────┘
+```
+
+### MVPデプロイ特記事項
+#### Webサーバーは不要
+VercelとRailwayは**フルマネージドサービス**のため、NginxやApacheなどのWebサーバーを別途用意する必要はありません。
+
+- **Vercel**: Edge Network、CDN、SSL証明書を自動提供
+- **Railway**: Pumaサーバー、リバースプロキシ、SSL証明書を自動提供
+
+#### データベースも自動管理
+RailwayでPostgreSQL追加時：
+- 自動バックアップ（日次）
+- 自動スケーリング
+- DATABASE_URLの自動設定
+- 高可用性（HA）対応
+
+### コスト管理
+| サービス | 無料枠 | 有料プラン |
+|---------|-------|-----------|
+| **Vercel** | 個人利用無料 | Pro: $20/月 |
+| **Railway** | $5クレジット/月 | Hobby: $5/月〜 |
+| **合計** | 約0〜500円 | 約1,500〜3,000円 |
+
+### 詳細なデプロイガイド
+完全なデプロイ手順については [docs/deployment_guide.md](docs/deployment_guide.md) を参照してください。
 
 ## 画面遷移図 - Figmaリンク
 https://www.figma.com/design/7LdlGw32kjHaZVHyc1o2eQ/%E5%BF%83%E3%81%AE%E3%83%AD%E3%82%B0?node-id=0-1&t=jIXvhxMQKXkdMGfm-1
