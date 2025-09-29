@@ -69,7 +69,7 @@ export default function Home() {
             </button>
 
             {/* カードの内容 */}
-            <h1 className="text-3xl font-bold mb-4 text-center">Affectly - Kokoro Log</h1>
+            <h1 className="text-3xl font-bold mb-4 text-center">Affectly</h1>
             <p className="text-lg mb-2 text-center">ようこそ、{user.name || user.email}さん</p>
             <p className="text-gray-600 mt-4 text-center">
               下のナビゲーションからチャット機能をご利用ください

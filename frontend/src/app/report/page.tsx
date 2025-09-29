@@ -151,15 +151,15 @@ export default function ReportPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* AI分析バナー（常時表示） */}
-      <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+      {/* AI分析バナー（常時表示） - 統一デザイン */}
+      <div className="bg-white/75 backdrop-blur-sm shadow-lg border-b border-gray-200/50 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <p className="text-sm text-blue-900 font-medium">
+            <p className="text-sm text-gray-800 font-bold">
               AI分析でレポートを更新できます
             </p>
             {lastAnalyzedAt && (
-              <p className="text-xs text-blue-700 mt-1">
+              <p className="text-xs text-gray-600 mt-1">
                 最終分析: {new Date(lastAnalyzedAt).toLocaleString('ja-JP')}
               </p>
             )}

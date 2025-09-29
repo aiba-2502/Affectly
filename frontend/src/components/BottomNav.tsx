@@ -48,7 +48,7 @@ export default function BottomNav() {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30 px-4 sm:px-6 lg:px-8 pb-4">
       <nav className="mx-auto max-w-md sm:max-w-lg lg:max-w-2xl">
-        <div className="bg-white/70 backdrop-blur-md rounded-3xl shadow-lg border border-gray-100/50">
+        <div className="bg-white/80 backdrop-blur-md shadow-xl rounded-full border border-[var(--color-primary)]/10">
           <div className="flex justify-around items-center h-20 px-6">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
@@ -59,24 +59,24 @@ export default function BottomNav() {
                   key={item.href}
                   href={item.href}
                   className={`relative flex flex-col items-center justify-center px-4 py-2 transition-all duration-200 ${
-                    isActive 
-                      ? 'text-blue-600' 
-                      : 'text-gray-400 hover:text-gray-600'
+                    isActive
+                      ? 'text-[var(--color-primary)]'
+                      : 'text-gray-400 hover:text-[var(--color-primary-hover)]'
                   }`}
                 >
                   <Icon className={`transition-all duration-200 ${
                     isActive ? 'w-9 h-9' : 'w-8 h-8'
                   }`} />
                   <span className={`text-xs font-medium mt-1 transition-all duration-200 ${
-                    isActive ? 'text-blue-600' : 'text-gray-500'
+                    isActive ? 'text-[var(--color-primary)]' : 'text-gray-500'
                   }`}>
                     {item.name}
                   </span>
-                  
+
                   {/* アクティブインジケータ */}
                   {isActive && (
                     <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
-                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse" />
+                      <div className="w-1.5 h-1.5 bg-[var(--color-secondary)] rounded-full animate-pulse" />
                     </div>
                   )}
                 </Link>
