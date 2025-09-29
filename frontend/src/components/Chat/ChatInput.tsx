@@ -45,11 +45,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     <div className="fixed bottom-24 left-0 right-0 bg-transparent z-20">
       <div className="px-6 sm:px-8 md:px-12 lg:px-16 py-3">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-end gap-3">
+          <div className="flex items-center gap-3">
             {/* 新規チャットボタン */}
             <button
               onClick={newSession}
-              className="p-3 rounded-full bg-[var(--color-primary)]/90 hover:bg-[var(--color-primary)] text-white shadow-lg transition-all hover:scale-105 duration-200"
+              className="flex-shrink-0 p-2.5 rounded-full bg-[var(--color-primary)]/90 hover:bg-[var(--color-primary)] text-white shadow-lg transition-all hover:scale-105 duration-200"
               title="新規チャット"
               aria-label="新規チャット"
             >
