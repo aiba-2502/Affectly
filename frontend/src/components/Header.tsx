@@ -35,7 +35,7 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b relative z-20">
+    <header className="bg-white/80 backdrop-blur-md shadow-xl border-b border-[var(--color-primary)]/10 relative z-20">
       <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
         <div className="flex items-center h-16 max-w-screen-2xl mx-auto">
           {/* ロゴ - 左側固定幅 */}
@@ -95,7 +95,7 @@ export default function Header() {
 
         {/* モバイルメニュー */}
         {isMenuOpen && (
-          <div className="md:hidden">
+          <div className="md:hidden bg-white/80 backdrop-blur-md">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
               {navItems.map((item) => (
                 <Link
