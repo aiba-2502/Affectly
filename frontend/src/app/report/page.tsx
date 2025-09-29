@@ -326,7 +326,7 @@ export default function ReportPage() {
                     onClick={() => setActiveTab('week')}
                     className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === 'week'
-                        ? 'text-blue-600 border-blue-600'
+                        ? 'text-[var(--color-primary)] border-[var(--color-primary)]'
                         : 'text-gray-500 border-transparent hover:text-gray-700'
                     }`}
                   >
@@ -336,7 +336,7 @@ export default function ReportPage() {
                     onClick={() => setActiveTab('month')}
                     className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === 'month'
-                        ? 'text-blue-600 border-blue-600'
+                        ? 'text-[var(--color-primary)] border-[var(--color-primary)]'
                         : 'text-gray-500 border-transparent hover:text-gray-700'
                     }`}
                   >

@@ -92,7 +92,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch, availableEmotion
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="block w-full px-3 py-2 text-black border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              className="block w-full px-3 py-2 text-black border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             />
           </div>
           <div>
@@ -104,7 +104,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch, availableEmotion
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               min={startDate}
-              className="block w-full px-3 py-2 text-black border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              className="block w-full px-3 py-2 text-black border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             />
           </div>
         </div>
@@ -117,7 +117,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch, availableEmotion
             <button
               type="button"
               onClick={() => setShowEmotionDropdown(!showEmotionDropdown)}
-              className="w-full px-3 py-2 text-left bg-white/80 backdrop-blur-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm flex items-center justify-between"
+              className="w-full px-3 py-2 text-left bg-white/80 backdrop-blur-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-sm flex items-center justify-between"
             >
               <span className="flex items-center gap-2">
                 <TagIcon className="h-4 w-4 text-gray-400" />
@@ -157,7 +157,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch, availableEmotion
                         type="checkbox"
                         checked={selectedEmotions.includes(emotion.name)}
                         onChange={() => toggleEmotion(emotion.name)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                       />
                       <span
                         className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium border ${
@@ -212,7 +212,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch, availableEmotion
           onChange={(e) => setKeyword(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           placeholder="キーワードで検索..."
-          className="block w-full pl-10 pr-3 py-2 text-black border border-gray-300 rounded-md leading-5 bg-white/80 backdrop-blur-sm placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+          className="block w-full pl-10 pr-3 py-2 text-black border border-gray-300 rounded-md leading-5 bg-white/80 backdrop-blur-sm placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-sm"
         />
       </div>
 

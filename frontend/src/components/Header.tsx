@@ -54,7 +54,7 @@ export default function Header() {
                   href={item.href}
                   className={`text-sm lg:text-base font-medium transition-colors whitespace-nowrap ${
                     isActive(item.href)
-                      ? 'text-blue-600 border-b-2 border-blue-600 pb-0.5'
+                      ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)] pb-0.5'
                       : 'text-gray-700 hover:text-gray-900'
                   }`}
                 >
