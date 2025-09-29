@@ -60,7 +60,7 @@ export default function InformationPage() {
             <div key={index} className="pb-8">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-lg">
+                  <div className="w-10 h-10 bg-[var(--color-primary)] text-white rounded-full flex items-center justify-center font-bold text-lg">
                     {step.number}
                   </div>
                 </div>
@@ -98,7 +98,7 @@ export default function InformationPage() {
           </p>
           <button
             onClick={() => router.push('/chat')}
-            className="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+            className="px-8 py-3 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-hover)] transition-colors font-medium"
           >
             今すぐ始める
           </button>

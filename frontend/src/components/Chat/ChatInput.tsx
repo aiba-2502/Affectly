@@ -2,6 +2,8 @@
 
 import React, { useState, KeyboardEvent, useRef, useEffect } from 'react';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
+import { PlusIcon } from '@heroicons/react/24/outline';
+import { useChatStore } from '@/stores/chatStore';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -9,13 +11,14 @@ interface ChatInputProps {
   placeholder?: string;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ 
-  onSend, 
+export const ChatInput: React.FC<ChatInputProps> = ({
+  onSend,
   disabled = false,
   placeholder = "メッセージを入力..."
 }) => {
   const [message, setMessage] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { newSession } = useChatStore();
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -43,6 +46,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       <div className="px-6 sm:px-8 md:px-12 lg:px-16 py-3">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-end gap-3">
+            {/* 新規チャットボタン */}
+            <button
+              onClick={newSession}
+              className="p-3 rounded-full bg-[var(--color-primary)]/90 hover:bg-[var(--color-primary)] text-white shadow-lg transition-all hover:scale-105 duration-200"
+              title="新規チャット"
+              aria-label="新規チャット"
+            >
+              <PlusIcon className="w-5 h-5" />
+            </button>
+
             <div className="flex-1 relative">
             <textarea
               ref={textareaRef}

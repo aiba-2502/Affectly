@@ -220,7 +220,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch, availableEmotion
       <div className="flex gap-2">
         <button
           onClick={handleSearch}
-          className="flex-1 px-4 py-2 bg-blue-600/90 backdrop-blur-sm text-white text-sm font-medium rounded-md hover:bg-blue-700/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          className="flex-1 px-4 py-2 bg-[var(--color-primary)]/90 backdrop-blur-sm text-white text-sm font-medium rounded-md hover:bg-[var(--color-primary-hover)]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] transition-colors"
         >
           検索
         </button>

@@ -188,7 +188,7 @@ export const ChatContainer: React.FC = () => {
       {/* チャット画面 - ChatGPT風 */}
       <div className="flex flex-col h-full relative z-10">
         {/* メッセージエリア - ボトムナビとの重複を避けるため下部パディングを増やす */}
-        <div className="flex-1 overflow-y-auto pb-48">
+        <div className="flex-1 overflow-y-auto pb-48 pt-4">
           <div className="w-full py-6 px-6 sm:px-8 md:px-12 lg:px-16">
             {messages.map((message) => (
               <ChatMessage key={message.id} message={message} />

@@ -86,7 +86,7 @@ export default function Signup() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 mt-1 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 mt-1 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
               placeholder="山田太郎"
             />
           </div>
@@ -101,7 +101,7 @@ export default function Signup() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 mt-1 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 mt-1 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
               placeholder="example@email.com"
             />
           </div>
@@ -117,7 +117,7 @@ export default function Signup() {
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 mt-1 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 mt-1 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
               placeholder="••••••••"
             />
           </div>
@@ -133,7 +133,7 @@ export default function Signup() {
               minLength={6}
               value={passwordConfirmation}
               onChange={(e) => setPasswordConfirmation(e.target.value)}
-              className="w-full px-3 py-2 mt-1 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 mt-1 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
               placeholder="••••••••"
             />
           </div>
@@ -141,7 +141,7 @@ export default function Signup() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2 text-white bg-[var(--color-primary)] rounded-md hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '登録中...' : '新規登録'}
           </button>
@@ -150,12 +150,12 @@ export default function Signup() {
         <div className="text-center space-y-2">
           <p className="text-sm text-gray-600">
             既にアカウントをお持ちの方は
-            <Link href="/login" className="ml-1 text-blue-600 hover:underline">
+            <Link href="/login" className="ml-1 text-[var(--color-primary)] hover:underline">
               ログイン
             </Link>
           </p>
           <p className="text-sm text-gray-600">
-            <Link href="/information" className="text-blue-600 hover:underline">
+            <Link href="/information" className="text-[var(--color-primary)] hover:underline">
               アプリの使い方を見る
             </Link>
           </p>
