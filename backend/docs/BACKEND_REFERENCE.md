@@ -1,4 +1,4 @@
-# Backend リファレンス - 心のログ
+# Backend リファレンス - Affectly
 
 ## 目次
 - [概要](#概要)
@@ -17,7 +17,7 @@
 
 ## 概要
 
-心のログのバックエンドは、Rails 8.0.2のAPIモードで構築された堅牢なRESTful APIサーバーです。
+Affectlyのバックエンドは、Rails 8.0.2のAPIモードで構築された堅牢なRESTful APIサーバーです。
 OpenAI、Anthropic、Google Geminiなどの複数のAIプロバイダーと統合し、感情分析、会話の永続化、レポート生成などの高度な機能を提供します。
 
 ## 技術スタック

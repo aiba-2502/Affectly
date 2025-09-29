@@ -35,13 +35,13 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b relative z-20">
+    <header className="bg-white/80 backdrop-blur-md shadow-xl border-b border-[var(--color-primary)]/10 relative z-20">
       <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
         <div className="flex items-center h-16 max-w-screen-2xl mx-auto">
           {/* ロゴ - 左側固定幅 */}
           <div className="w-40 lg:w-48 xl:w-56 flex-shrink-0">
             <Link href="/" className="text-lg sm:text-xl font-bold text-gray-900 hover:text-gray-700 transition-colors inline-block">
-              心のログ
+              Affectly
             </Link>
           </div>
 
@@ -54,7 +54,7 @@ export default function Header() {
                   href={item.href}
                   className={`text-sm lg:text-base font-medium transition-colors whitespace-nowrap ${
                     isActive(item.href)
-                      ? 'text-blue-600 border-b-2 border-blue-600 pb-0.5'
+                      ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)] pb-0.5'
                       : 'text-gray-700 hover:text-gray-900'
                   }`}
                 >
@@ -95,7 +95,7 @@ export default function Header() {
 
         {/* モバイルメニュー */}
         {isMenuOpen && (
-          <div className="md:hidden">
+          <div className="md:hidden bg-white/80 backdrop-blur-md">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
               {navItems.map((item) => (
                 <Link
@@ -103,7 +103,7 @@ export default function Header() {
                   href={item.href}
                   className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
                     isActive(item.href)
-                      ? 'text-blue-600 bg-blue-50'
+                      ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10'
                       : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >

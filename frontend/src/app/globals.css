@@ -3,6 +3,14 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* AItuber-kit風のテーマカラー定義（ボトムナビ用） */
+  /* プライマリカラー（紫系） */
+  --color-primary: #856292;
+  --color-primary-hover: #8e76a1;
+
+  /* セカンダリカラー（ピンク系） */
+  --color-secondary: #ff617f;
 }
 
 @theme inline {

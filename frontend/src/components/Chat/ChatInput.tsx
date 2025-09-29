@@ -2,6 +2,8 @@
 
 import React, { useState, KeyboardEvent, useRef, useEffect } from 'react';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
+import { PlusIcon } from '@heroicons/react/24/outline';
+import { useChatStore } from '@/stores/chatStore';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -9,13 +11,14 @@ interface ChatInputProps {
   placeholder?: string;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ 
-  onSend, 
+export const ChatInput: React.FC<ChatInputProps> = ({
+  onSend,
   disabled = false,
   placeholder = "メッセージを入力..."
 }) => {
   const [message, setMessage] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { newSession } = useChatStore();
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -39,10 +42,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="fixed bottom-16 left-0 right-0 bg-transparent z-30">
+    <div className="fixed bottom-24 left-0 right-0 bg-transparent z-20">
       <div className="px-6 sm:px-8 md:px-12 lg:px-16 py-3">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-end gap-3">
+          <div className="flex items-center gap-3">
+            {/* 新規チャットボタン */}
+            <button
+              onClick={newSession}
+              className="flex-shrink-0 p-2.5 rounded-full bg-[var(--color-primary)]/90 hover:bg-[var(--color-primary)] text-white shadow-lg transition-all hover:scale-105 duration-200"
+              title="新規チャット"
+              aria-label="新規チャット"
+            >
+              <PlusIcon className="w-5 h-5" />
+            </button>
+
             <div className="flex-1 relative">
             <textarea
               ref={textareaRef}
@@ -63,8 +76,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               onClick={handleSend}
               disabled={disabled || !message.trim()}
               className={`absolute right-2 bottom-2 p-2 rounded-md transition-all ${
-                message.trim() 
-                  ? 'text-gray-700 hover:bg-gray-100' 
+                message.trim()
+                  ? 'text-gray-700 hover:bg-gray-100'
                   : 'text-gray-400 cursor-not-allowed'
               }`}
               aria-label="送信"
@@ -72,13 +85,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               <PaperAirplaneIcon className="w-5 h-5 rotate-0" />
             </button>
             </div>
-          </div>
-          
-          {/* 注意書き（ChatGPT風） */}
-          <div className="text-xs text-gray-600 text-center mt-2">
-          <span className="bg-white/60 backdrop-blur-sm rounded-lg px-3 py-1 inline-block">
-            AIアシスタントは間違える可能性があります。重要な情報は確認してください。
-          </span>
           </div>
         </div>
       </div>

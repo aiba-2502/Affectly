@@ -12,6 +12,9 @@ import dynamic from 'next/dynamic';
 import { logger } from '@/utils/logger';
 import { translateEmotion } from '@/utils/emotionTranslations';
 import AnalysisModal from '@/components/AnalysisModal';
+import InsufficientDataModal from '@/components/InsufficientDataModal';
+import { chatApi } from '@/services/chatApi';
+import { useChatStore } from '@/stores/chatStore';
 
 // Live2Dコンポーネントを動的インポート（SSR無効化）- コンテナ内表示版
 const Live2DContainedComponent = dynamic(() => import('@/components/Live2DContainedComponent'), {
@@ -37,6 +40,9 @@ export default function ReportPage() {
   const [showLive2D, setShowLive2D] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
+  const [showInsufficientDataModal, setShowInsufficientDataModal] = useState(false);
+  const [currentMessageCount, setCurrentMessageCount] = useState(0);
+  const { sessionId } = useChatStore();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -46,9 +52,10 @@ export default function ReportPage() {
 
 
   useEffect(() => {
-    // レポートデータを取得
+    // レポートデータとメッセージ数を取得
     if (user) {
       fetchReportData();
+      fetchMessageCount();
     }
   }, [user]);
 
@@ -68,6 +75,7 @@ export default function ReportPage() {
       if (user && !isAnalyzing) {
         logger.log('ページフォーカス検出 - レポートデータを更新');
         fetchReportData();
+        fetchMessageCount();
       }
     };
 
@@ -114,9 +122,35 @@ export default function ReportPage() {
     }
   };
 
-  // AI分析を手動実行（制限なし）
+  // チャットレコード数を取得
+  const fetchMessageCount = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        chatApi.setToken(token);
+      }
+      // 全セッションのメッセージを取得（現在のセッションではなく全体）
+      const response = await chatApi.getMessages(undefined, 1, 1);
+      setCurrentMessageCount(response.total_count);
+      return response.total_count;
+    } catch (error) {
+      logger.error('メッセージ数の取得に失敗しました:', error);
+      return 0;
+    }
+  };
+
+  // AI分析を手動実行（4件以上のチャットが必要）
   const handleExecuteAnalysis = async () => {
     try {
+      // メッセージ数をチェック
+      const messageCount = await fetchMessageCount();
+
+      // 4件未満の場合はモーダルを表示
+      if (messageCount < 4) {
+        setShowInsufficientDataModal(true);
+        return;
+      }
+
       setIsAnalyzing(true);
       logger.log('AI分析を開始します...');
 
@@ -151,15 +185,15 @@ export default function ReportPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* AI分析バナー（常時表示） */}
-      <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+      {/* AI分析バナー（常時表示） - 統一デザイン */}
+      <div className="bg-white/75 backdrop-blur-sm shadow-lg border-b border-gray-200/50 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <p className="text-sm text-blue-900 font-medium">
+            <p className="text-sm text-gray-800 font-bold">
               AI分析でレポートを更新できます
             </p>
             {lastAnalyzedAt && (
-              <p className="text-xs text-blue-700 mt-1">
+              <p className="text-xs text-gray-600 mt-1">
                 最終分析: {new Date(lastAnalyzedAt).toLocaleString('ja-JP')}
               </p>
             )}
@@ -171,7 +205,7 @@ export default function ReportPage() {
               className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
                 isAnalyzing
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]'
               }`}
             >
               {isAnalyzing ? (
@@ -292,7 +326,7 @@ export default function ReportPage() {
                     onClick={() => setActiveTab('week')}
                     className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === 'week'
-                        ? 'text-blue-600 border-blue-600'
+                        ? 'text-[var(--color-primary)] border-[var(--color-primary)]'
                         : 'text-gray-500 border-transparent hover:text-gray-700'
                     }`}
                   >
@@ -302,7 +336,7 @@ export default function ReportPage() {
                     onClick={() => setActiveTab('month')}
                     className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === 'month'
-                        ? 'text-blue-600 border-blue-600'
+                        ? 'text-[var(--color-primary)] border-[var(--color-primary)]'
                         : 'text-gray-500 border-transparent hover:text-gray-700'
                     }`}
                   >
@@ -376,6 +410,12 @@ export default function ReportPage() {
 
       <BottomNav />
       <AnalysisModal isOpen={isAnalyzing} />
+      <InsufficientDataModal
+        isOpen={showInsufficientDataModal}
+        onClose={() => setShowInsufficientDataModal(false)}
+        currentMessageCount={currentMessageCount}
+        requiredMessageCount={4}
+      />
     </div>
   );
 }

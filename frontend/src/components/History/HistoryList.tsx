@@ -249,7 +249,7 @@ export const HistoryList: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-gray-500">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto mb-2"></div>
           <p>履歴を読み込み中...</p>
         </div>
       </div>
@@ -262,7 +262,7 @@ export const HistoryList: React.FC = () => {
         <div className="text-red-500 mb-4">{error}</div>
         <button
           onClick={loadSessions}
-          className="px-4 py-2 bg-blue-500/90 backdrop-blur-sm text-white rounded-lg hover:bg-blue-600/90 transition-colors"
+          className="px-4 py-2 bg-[var(--color-primary)]/90 backdrop-blur-sm text-white rounded-lg hover:bg-[var(--color-primary-hover)]/90 transition-colors"
         >
           再読み込み
         </button>
@@ -297,7 +297,7 @@ export const HistoryList: React.FC = () => {
           </p>
           <button
             onClick={() => router.push('/chat')}
-            className="px-6 py-3 bg-blue-500/90 backdrop-blur-sm text-white rounded-lg hover:bg-blue-600/90 transition-colors"
+            className="px-6 py-3 bg-[var(--color-primary)]/90 backdrop-blur-sm text-white rounded-lg hover:bg-[var(--color-primary-hover)]/90 transition-colors"
           >
             チャットを開始
           </button>

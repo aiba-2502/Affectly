@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Initial RDB schema for Kokoro Log application
+# Initial RDB schema for Affectly application
 # Creates all necessary tables for the application:
 # - users: User authentication and profiles
 # - tags: Emotion/topic tags for categorization

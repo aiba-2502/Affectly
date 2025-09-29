@@ -1,4 +1,4 @@
-# 心のログ – データディクショナリ（RDB＋MongoDB｜messages=MongoDB・summaries=RDB）
+# Affectly – データディクショナリ（RDB＋MongoDB｜messages=MongoDB・summaries=RDB）
 
 > バックエンド：Rails（RDB＝MySQL / NoSQL＝MongoDB）  
 > 採用方針：**メッセージ本体＝MongoDB**（可変スキーマ・大容量・時系列）、**サマリ＝RDB**（安定スキーマ・一意制約・集計/レポート向き）

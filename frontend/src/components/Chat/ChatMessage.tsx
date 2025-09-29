@@ -134,7 +134,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
                     ? 'bg-gray-300 cursor-not-allowed opacity-50'
                     : isPlaying
                     ? 'bg-red-500 hover:bg-red-600 text-white'
-                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white'
                 }`}
                 title={isOtherMessagePlaying ? '他のメッセージ再生中' : (isPlaying ? '停止' : '読み上げ')}
               >

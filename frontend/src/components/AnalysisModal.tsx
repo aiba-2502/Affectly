@@ -43,14 +43,14 @@ const AnalysisModal = ({ isOpen, onClose }: AnalysisModalProps) => {
       {/* モーダル本体 */}
       <div className="relative bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
         <div className="flex items-center mb-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mr-3"></div>
           <h3 className="text-lg font-bold text-gray-900">AI分析中...</h3>
         </div>
 
         {/* プログレスバー */}
         <div className="w-full bg-gray-200 rounded-full h-2 mb-4 overflow-hidden">
           <div
-            className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-1000 ease-out"
+            className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] h-2 rounded-full transition-all duration-1000 ease-out"
             style={{width: `${progressPercentage}%`}}
           >
             <div className="h-full bg-white/30 animate-pulse" />
