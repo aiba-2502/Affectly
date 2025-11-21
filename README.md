@@ -117,6 +117,7 @@
 | コード品質                  | Rubocop + ESLint + Prettier                 |
 | テスト                      | RSpec (Rails) + Jest (Next.js)              |
 
+
 #### システム構成
 ```
 ┌─────────────────┐     ┌─────────────────┐
